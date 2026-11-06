@@ -133,7 +133,7 @@ paths:
           description: Filtro de modais permitidos separados por vírgula
           schema:
             type: string
-            example: "barco_linha,aviacao_regional"
+            example: "barco_regional,aviao_regional"
       responses:
         '200':
           description: Opções de rotas encontradas e ranqueadas

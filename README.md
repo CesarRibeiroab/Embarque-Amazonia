@@ -60,7 +60,7 @@ python database/init_db.py
 *Saída esperada:* `BANCO DE DADOS EXECUTADO COM SUCESSO! (7 localidades, 10 modais, 8 trechos)`.
 
 ### 2. Executar a Suíte de Testes Automatizados
-O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP:
+O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP (12 testes ao todo):
 
 * **Testes do Motor de Rotas (8 testes):**
 ```bash
@@ -68,11 +68,11 @@ python api/tests/test_route_engine.py
 ```
 *Saída esperada:* `Ran 8 tests in 0.010s - OK`
 
-* **Testes de Integração da API REST (3 testes):**
+* **Testes de Integração da API REST (4 testes):**
 ```bash
 python api/tests/test_api.py
 ```
-*Saída esperada:* `Ran 3 tests in 0.368s - OK`
+*Saída esperada:* `Ran 4 tests in 0.404s - OK`
 
 ### 3. Executar o Servidor FastAPI
 Para subir o servidor da API com recarregamento dinâmico:
