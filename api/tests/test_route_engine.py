@@ -1,16 +1,6 @@
 """
 Suíte Abrangente de Testes Automatizados do Motor de Roteamento Multimodal
 Localizado em: api/tests/test_route_engine.py
-
-Cobre os requisitos estritos do Trello:
-1. Rota 1 (Belém -> Manaus): Opções A, B e C combinada (com 2 d, R$ 750,00).
-2. Rota 1 Opção B: Acúmulo conjunto dos selos 'Menor tempo' e 'Mais confiável'.
-3. Cálculo dinâmico da conexão da Opção C (4 h 40 min = 280 min calculados pela diferença 14:00 - 09:20).
-4. Rota 2 (Manaus -> Tefé): Voadeira expressa R$ 320 vs Barco regional R$ 190.
-5. Rota 3 (Cametá -> Alenquer): Retorno de lista vazia para localidades sem conexão.
-6. Rejeição de conexão impossível (horário de partida antes da chegada).
-7. Atribuição do selo 'Desatualizado' para trechos com mais de 30 dias de recência.
-8. Carregamento direto a partir do banco de dados SQLite (comprovando fonte única de dados).
 """
 
 import os
@@ -53,8 +43,8 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
 
     def test_04_rota_1_opcao_b_recebe_ambos_os_selos(self):
         rotas = self.motor.calcular_rotas(origem_id=1, destino_id=2, criterio="menor_tempo")
-        # Opção B é o voo direto da Azul (135 min, atualizado hoje)
-        opcao_b = next((r for r in rotas if r.trechos[0].modal_codigo == "aviacao_regional"), None)
+        # Opção B é o voo direto da Azul (135 min, modal aviao_regional, atualizado hoje)
+        opcao_b = next((r for r in rotas if r.trechos[0].modal_codigo == "aviao_regional"), None)
         self.assertIsNotNone(opcao_b)
         self.assertIn("Menor tempo", opcao_b.selos, "Opção B deve ter o selo 'Menor tempo'")
         self.assertIn("Mais confiável", opcao_b.selos, "Opção B deve ter o selo 'Mais confiável'")
@@ -94,4 +84,3 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-

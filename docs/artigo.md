@@ -4,16 +4,16 @@
 
 ---
 
-### Versão Identificada (Para Submissão Regular)
-* **César Augusto Borges Ribeiro** — cesar24070011@aluno.cesupa.br
-* **Fernando César Mourão Fonseca** — fernando24070034@aluno.cesupa.br
-* **Herbert Aciolly Leão de Jesus** — herbert24070016@aluno.cesupa.br
-* **Lucas Barros Mutran** — lucas23070208@aluno.cesupa.br  
+### Autoria (Cópia Identificada)
+* **César Augusto Borges Ribeiro**
+* **Fernando César Mourão Fonseca**
+* **Herbert Aciolly Leão de Jesus**
+* **Lucas Barros Mutran**  
 *Discentes do Bacharelado em Ciência da Computação — Centro Universitário do Estado do Pará (CESUPA)*  
 *Belém, Pará, Brasil*
 
 > [!NOTE]
-> **Para a Cópia Anônima (Blind Review):** Os nomes, e-mails e afiliações institucionais acima devem ser integralmente omitidos, mantendo apenas o título, resumo e corpo textual conforme as diretrizes do edital.
+> **Para a Cópia Anônima (Blind Review):** Os nomes e a filiação institucional acima devem ser integralmente omitidos, mantendo apenas o título, resumo e corpo textual conforme as diretrizes do edital.
 
 ---
 
@@ -73,4 +73,3 @@ INSTITUTO DE PESQUISA ECONÔMICA APLICADA (IPEA). **Transporte Fluvial de Passag
 * **Ferramenta Utilizada:** Antigravity AI / Large Language Model (2026).
 * **Finalidade e Escopo de Aplicação:** Apoio à síntese de requisitos, geração inicial de esqueletos de código e documentação (OpenAPI e SQL), elaboração de casos de teste automatizados e suporte à revisão ortográfica e adequação ABNT.
 * **Autoria e Validação Discente:** A concepção do escopo, modelagem do domínio amazônico, levantamento factual de modais, correção manual dos algoritmos de busca e validação integral dos testes foram de responsabilidade exclusiva dos discentes autores.
-

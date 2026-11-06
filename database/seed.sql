@@ -1,22 +1,23 @@
 -- ==============================================================================
 -- EMBARQUE AMAZÔNIA — SEED DE DADOS ILUSTRATIVOS CANÔNICOS
--- Alinhado rigorosamente ao Card 1, Card 5 e Card 7 do Trello
--- Contém todos os 10 modais caracterizados no projeto
--- Compatível com SQLite e PostgreSQL
+-- Alinhado rigorosamente aos 10 Modais Canônicos do Projeto (Glossário / Card 1 / Figma)
 -- ==============================================================================
 
--- 1. OS 10 MODAIS REGIONAIS DA AMAZÔNIA LEGAL (Tabela completa do domínio)
+-- 1. OS 10 MODAIS CANÔNICOS DO PROJETO (Card 1 / Glossário / Figma / Artigo)
+-- Categoria Fluvial: Barco regional, Voadeira, Balsa pequena, Balsa grande
+-- Categoria Rodoviária: Carro, Ônibus, Moto-táxi
+-- Categoria Aérea: Avião regional, Táxi aéreo, Helicóptero
 INSERT INTO modal (id, codigo, nome, categoria, velocidade_media_kmh, requer_registro_orgao, descricao) VALUES
-(1, 'barco_linha', 'Barco Regional', 'fluvial', 18.0, 1, 'Embarcação longitudinal com múltiplos conveses, leito em rede e camarotes.'),
-(2, 'voadeira', 'Voadeira expressa', 'fluvial', 35.0, 0, 'Lancha rápida vicinal ou piloto autônomo com motor de popa.'),
-(3, 'ferry_boat', 'Ferry-Boat / Balsa Ro-Ro', 'fluvial', 20.0, 1, 'Transporte conjunto de veículos, cargas e passageiros.'),
-(4, 'onibus_intermunicipal', 'Ônibus Intermunicipal', 'rodoviario', 60.0, 1, 'Linha regular rodoviária intermunicipal.'),
-(5, 'aviacao_regional', 'Avião regional', 'aereo', 450.0, 1, 'Aviação comercial regular e turboélices ligando polos e interior.'),
-(6, 'balsa_passageiro', 'Balsa Mista de Linha', 'fluvial', 15.0, 1, 'Balsa empurrada por rebocador para grandes travessias fluviais.'),
-(7, 'lancha_rapida', 'Lancha Rápida / Ajato', 'fluvial', 45.0, 1, 'Lancha rápida cabinada climatizada com poltronas.'),
-(8, 'onibus_interestadual', 'Ônibus Interestadual', 'rodoviario', 70.0, 1, 'Linhas interestaduais fiscalizadas pela ANTT.'),
-(9, 'van_cooperativa', 'Van / Transporte Complementar', 'rodoviario', 65.0, 1, 'Micro-ônibus e vans de cooperativas regionais.'),
-(10, 'aviacao_comercial_jato', 'Voo Comercial Regular (Jato)', 'aereo', 750.0, 1, 'Linhas regulares com jatos comerciais de grande porte.');
+(1, 'barco_regional', 'Barco regional', 'fluvial', 18.0, 1, 'Embarcação longitudinal com conveses para rede e camarotes.'),
+(2, 'voadeira', 'Voadeira', 'fluvial', 35.0, 0, 'Lancha rápida vicinal ou piloto autônomo com motor de popa.'),
+(3, 'balsa_pequena', 'Balsa pequena', 'fluvial', 15.0, 1, 'Balsa para travessias curtas e rios vicinais.'),
+(4, 'balsa_grande', 'Balsa grande', 'fluvial', 22.0, 1, 'Ferry-boat / Balsa Ro-Ro para grandes travessias de passageiros e veículos.'),
+(5, 'carro', 'Carro', 'rodoviario', 70.0, 0, 'Transporte rodoviário particular ou fretado.'),
+(6, 'onibus', 'Ônibus', 'rodoviario', 60.0, 1, 'Linha regular rodoviária intermunicipal ou interestadual.'),
+(7, 'moto_taxi', 'Moto-táxi', 'rodoviario', 40.0, 0, 'Transporte urbano e transbordo rápido nos cais e atracadouros.'),
+(8, 'aviao_regional', 'Avião regional', 'aereo', 450.0, 1, 'Aviação comercial regular e turboélices ligando polos e interior.'),
+(9, 'taxi_aereo', 'Táxi aéreo', 'aereo', 280.0, 1, 'Aeronaves de pequeno porte sob demanda para pistas no interior.'),
+(10, 'helicoptero', 'Helicóptero', 'aereo', 200.0, 1, 'Transporte aéreo especializado para áreas isoladas.');
 
 -- 2. LOCALIDADES ILUSTRATIVAS (Card 1)
 INSERT INTO localidade (id, codigo_ibge, nome, uf, e_polo_regional, ativo) VALUES
@@ -35,11 +36,10 @@ INSERT INTO operador (id, razao_social, nome_fantasia, tipo_operador, cidade_bas
 (3, 'Piloto Autônomo Colaborativo', 'Piloto autônomo (cadastro colaborativo)', 'autonomo_associado', 2),
 (4, 'Oliveira Navegações da Amazônia', 'Oliveira Navegações', 'empresa_regular', 2);
 
--- 4. OPERADOR_MODAL (Mapeamento N:N dos modais autorizados)
+-- 4. OPERADOR_MODAL (Mapeamento N:N dos modais operados)
 INSERT INTO operador_modal (operador_id, modal_id, numero_registro, orgao_emissor) VALUES
 (1, 1, 'ANTAQ-REG-15098', 'ANTAQ'),
-(2, 5, 'ANAC-RBAC121-AZU', 'ANAC'),
-(2, 10, 'ANAC-RBAC121-AZU', 'ANAC'),
+(2, 8, 'ANAC-RBAC121-AZU', 'ANAC'),
 (3, 2, 'CAD-COLAB-9921', 'MUNICIPAL'),
 (4, 1, 'ANTAQ-REG-13045', 'ANTAQ');
 
@@ -53,7 +53,7 @@ INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_de
 
 -- Opção B: Avião regional Azul (2h 15min = 135 min, R$ 780,00, atualizado hoje: 2026-11-06)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(2, 1, 2, 'Aeroporto Internacional de Belém', 'Aeroporto Eduardo Gomes', 2, 5, 135, 780.00, 0, '2026-11-06', 'Voo direto regular.');
+(2, 1, 2, 'Aeroporto Internacional de Belém', 'Aeroporto Eduardo Gomes', 2, 8, 135, 780.00, 0, '2026-11-06', 'Voo direto regular.');
 
 -- Opção C (Combinada): 
 -- Trecho 1: Avião Belém -> Santarém (1h 20min = 80 min, saída 08:00, chegada 09:20, R$ 540,00)
@@ -61,7 +61,7 @@ INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_de
 -- Trecho 2: Barco Santarém -> Manaus (1d 18h = 2520 min, saída 14:00, R$ 210,00)
 -- Total C: 80m + 280m + 2520m = 2880 min = 48h = 2 dias | Custo = R$ 750,00 | Atualizado há 12 dias (2026-10-25)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(3, 1, 3, 'Aeroporto de Belém', 'Aeroporto de Santarém', 2, 5, 80, 540.00, 280, '2026-10-25', 'Voo regional.');
+(3, 1, 3, 'Aeroporto de Belém', 'Aeroporto de Santarém', 2, 8, 80, 540.00, 280, '2026-10-25', 'Voo regional.');
 
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
 (4, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 210.00, 0, '2026-10-25', 'Barco de linha.');

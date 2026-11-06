@@ -19,17 +19,18 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 
 ```
 .
-├── api/                  # Motor de rotas e back-end em Python (FastAPI previsto)
+├── api/                  # API REST em Python / FastAPI e Motor de Rotas
 │   ├── engine/           # Motor de cálculo em grafo ponderado multimodal
 │   │   └── route_engine.py
-│   ├── tests/            # Suíte de testes unitários de aceitação (8 testes)
-│   │   └── test_route_engine.py
-│   ├── main.py           # Implementação inicial dos endpoints da API
-│   └── requirements.txt  # Dependências do back-end Python
+│   ├── tests/            # Suítes de testes unitários e de integração
+│   │   ├── test_route_engine.py  # 8 testes de aceitação do motor
+│   │   └── test_api.py           # Testes dos endpoints HTTP com TestClient
+│   ├── main.py           # Implementação dos endpoints da API (/localidades e /rotas)
+│   └── requirements.txt  # Dependências com versões estritas fixadas
 ├── database/             # Modelagem de dados e scripts SQL
 │   ├── schema.sql        # Esquema físico normalizado
 │   ├── seed.sql          # Seed de dados canônicos ilustrativos (10 modais, Rotas 1, 2 e 3)
-│   └── init_db.py        # Script de inicialização e carga automatizada do SQLite local
+│   └── init_db.py        # Script de inicialização e carga automatizada da base
 ├── docs/                 # Documentação formal e especificações do projeto
 │   ├── openapi.yaml      # Contrato formal da API em OpenAPI 3.1 com exemplos canônicos
 │   ├── artigo.md         # Texto acadêmico (Resumo, Introdução, Referências e Declaração IA)
@@ -39,8 +40,8 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 ```
 
 > [!NOTE]
-> O arquivo de banco binário local (`embarque.db`) é gerado dinamicamente a partir dos scripts `schema.sql` e `seed.sql` através do comando `python database/init_db.py`, sendo mantido fora do versionamento via `.gitignore`.
-> **Estratégia de Banco:** SQLite em desenvolvimento local; PostgreSQL previsto para homologação e entrega final.
+> **Estratégia de Banco:** SQLite em desenvolvimento local; PostgreSQL previsto para homologação e entrega final. O arquivo de banco binário local (`embarque.db`) é gerado dinamicamente a partir dos scripts `schema.sql` e `seed.sql` através do comando `python database/init_db.py`, sendo mantido fora do versionamento via `.gitignore`.
+> **Contrato da API:** A fonte canônica da verdade para o contrato é a especificação formal `docs/openapi.yaml`, escrita antes da implementação para orientar simultaneamente o back-end e o front-end. O FastAPI implementa rigorosamente esse contrato.
 
 ---
 
@@ -51,46 +52,50 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 * **Node.js 18+ / npx** (opcional, para o mock server do Prism)
 
 ### 1. Inicializar a Base de Dados
-O projeto utiliza uma fonte única de dados canônica. Para criar e popular o banco SQLite a partir do `schema.sql` e `seed.sql`:
+Para criar e popular o banco relacional SQLite local a partir do `schema.sql` e `seed.sql`:
 
 ```bash
 python database/init_db.py
 ```
 *Saída esperada:* `BANCO DE DADOS EXECUTADO COM SUCESSO! (7 localidades, 10 modais, 8 trechos)`.
 
-### 2. Executar a Suíte de Testes do Motor de Rotas
-O motor de rotas lê diretamente os dados do banco e avalia os critérios de **Menor custo**, **Menor tempo** e **Mais confiável** (por recência):
+### 2. Executar a Suíte de Testes Automatizados
+O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP:
 
+* **Testes do Motor de Rotas (8 testes):**
 ```bash
 python api/tests/test_route_engine.py
 ```
-*Saída esperada:*
-```
-test_01_conexao_calculada_dinamicamente ... ok
-test_02_conexao_impossivel_rejeitada ... ok
-test_03_rota_1_tres_opcoes_e_opcao_c_combinada ... ok
-test_04_rota_1_opcao_b_recebe_ambos_os_selos ... ok
-test_05_rota_1_criterio_menor_custo ... ok
-test_06_rota_2_manaus_tefe_valores_canonicos ... ok
-test_07_rota_3_sem_resultados ... ok
-test_08_trecho_desatualizado_acima_de_30_dias ... ok
+*Saída esperada:* `Ran 8 tests in 0.010s - OK`
 
-----------------------------------------------------------------------
-Ran 8 tests in 0.012s - OK
+* **Testes de Integração da API REST (3 testes):**
+```bash
+python api/tests/test_api.py
 ```
+*Saída esperada:* `Ran 3 tests in 0.368s - OK`
 
-### 3. Executar o Mock Server da API (Prism CLI)
-Para subir um servidor de mock local com base no contrato OpenAPI 3.1:
+### 3. Executar o Servidor FastAPI
+Para subir o servidor da API com recarregamento dinâmico:
+
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+Com o servidor ativo:
+* **Documentação Swagger UI Interativa:** `http://localhost:8000/docs`
+* **Busca de Rotas (Exemplo Belém → Manaus):** `http://localhost:8000/api/v1/rotas?origem=Belém&destino=Manaus&criterio=menor_custo`
+* **Catálogo de Localidades:** `http://localhost:8000/api/v1/localidades`
+
+### 4. Executar o Mock Server da API (Prism CLI)
+Caso deseje testar a simulação estática do contrato OpenAPI 3.1:
 
 ```bash
 npx @stoplight/prism-cli mock docs/openapi.yaml --port 4010
 ```
-Com o mock em execução, faça requisições no navegador ou terminal:
-* **Localidades:** `http://127.0.0.1:4010/localidades`
-* **Rotas Belém → Manaus:** `http://127.0.0.1:4010/rotas?origem=Belém&destino=Manaus`
+* **Localidades no Mock:** `http://127.0.0.1:4010/localidades`
+* **Rotas Belém → Manaus no Mock:** `http://127.0.0.1:4010/rotas?origem=Belém&destino=Manaus`
 
 > [!TIP]
-> O Prism CLI simula o tráfego HTTP estático documentado no contrato para destravar o desenvolvimento do front-end. O cálculo dinâmico de rotas reside no motor em Python (`api/engine/route_engine.py`).
+> O Prism CLI simula os payloads documentados no contrato OpenAPI para permitir que a equipe de front-end programe os componentes de interface antes da subida da API real. A computação algorítmica dinâmica reside no servidor FastAPI e no motor em Python.
 
 ---
 
