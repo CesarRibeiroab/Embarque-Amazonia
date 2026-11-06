@@ -4,6 +4,8 @@ Módulo oficial da API (Localizado em api/engine/route_engine.py)
 
 Capacidades:
 - Lê diretamente do banco de dados relacional (SQLite / PostgreSQL) ou opera em memória
+- Previne duplicação de arestas agrupando múltiplos horários por trecho
+- Suporta filtragem por modais permitidos
 - Calcula rotas multimodais em grafo com no máximo 3 trechos
 - Valida conexões temporais reais (rejeita conexão se hora de partida subsequente for anterior à chegada)
 - Calcula o tempo de conexão a partir da diferença real entre horários ou do intervalo cadastrado
@@ -54,6 +56,7 @@ class Trecho:
     def dias_desde_atualizacao(self) -> int:
         try:
             d_at = datetime.strptime(self.data_ultima_atualizacao, "%Y-%m-%d").date()
+            # Data de referência canônica dos testes: 2026-11-06
             ref_date = date(2026, 11, 6)
             return max(0, (ref_date - d_at).days)
         except Exception:
@@ -126,7 +129,11 @@ class MotorRoteamentoMultimodal:
         self.adjacencia[trecho.origem_id].append(trecho)
 
     def carregar_do_banco(self, db_path: str):
-        """Carrega localidades e trechos diretamente do banco SQLite para garantir fonte única de dados."""
+        """
+        Carrega localidades e trechos diretamente do banco SQLite.
+        Utiliza subconsulta para pegar o horário principal e evitar duplicação de arestas
+        caso um trecho possua múltiplos horários em horario_operacao.
+        """
         con = sqlite3.connect(db_path)
         cur = con.cursor()
 
@@ -134,18 +141,17 @@ class MotorRoteamentoMultimodal:
         for row in cur.execute("SELECT id, nome, uf, e_polo_regional FROM localidade WHERE ativo = 1"):
             self.adicionar_localidade(Localidade(row[0], row[1], row[2], bool(row[3])))
 
-        # Carregar trechos com horários
+        # Carregar trechos agrupados (evitando multiplicação por múltiplos horários)
         query = """
             SELECT t.id, t.origem_id, t.destino_id, o.nome_fantasia, m.codigo, m.nome,
                    t.duracao_estimada_minutos, t.tarifa_base_reais, t.data_ultima_atualizacao,
                    t.tempo_conexao_espera_minutos, t.terminal_origem_nome, t.terminal_destino_nome,
                    t.regime_hidrico_observacao,
-                   COALESCE(h.hora_partida, '00:00:00'),
-                   COALESCE(h.hora_chegada_estimada, '00:00:00')
+                   COALESCE((SELECT hora_partida FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), '00:00:00') AS h_partida,
+                   COALESCE((SELECT hora_chegada_estimada FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), '00:00:00') AS h_chegada
             FROM trecho t
             JOIN operador o ON t.operador_id = o.id
             JOIN modal m ON t.modal_id = m.id
-            LEFT JOIN horario_operacao h ON t.id = h.trecho_id
             WHERE t.ativo = 1
         """
         for r in cur.execute(query):
@@ -160,7 +166,7 @@ class MotorRoteamentoMultimodal:
 
         con.close()
 
-    def _dfs_caminhos(self, atual: int, destino: int, visitados: set, max_trechos: int = 3) -> List[List[Trecho]]:
+    def _dfs_caminhos(self, atual: int, destino: int, visitados: set, max_trechos: int = 3, modais_permitidos: Optional[set] = None) -> List[List[Trecho]]:
         if atual == destino:
             return [[]]
         if len(visitados) >= max_trechos + 1:
@@ -168,21 +174,27 @@ class MotorRoteamentoMultimodal:
 
         caminhos = []
         for tr in self.adjacencia.get(atual, []):
+            # Se houver filtro de modais, descarta trechos fora do filtro
+            if modais_permitidos is not None and tr.modal_codigo not in modais_permitidos:
+                continue
+
             prox = tr.destino_id
             if prox not in visitados:
                 visitados.add(prox)
-                sub_caminhos = self._dfs_caminhos(prox, destino, visitados, max_trechos)
+                sub_caminhos = self._dfs_caminhos(prox, destino, visitados, max_trechos, modais_permitidos)
                 for sc in sub_caminhos:
                     if len(sc) + 1 <= max_trechos:
                         caminhos.append([tr] + sc)
                 visitados.remove(prox)
         return caminhos
 
-    def calcular_rotas(self, origem_id: int, destino_id: int, criterio: str = "menor_tempo") -> List[OpcaoRota]:
+    def calcular_rotas(self, origem_id: int, destino_id: int, criterio: str = "menor_tempo", modais_filtro: Optional[List[str]] = None) -> List[OpcaoRota]:
         if origem_id not in self.localidades or destino_id not in self.localidades:
             return []
 
-        caminhos_brutos = self._dfs_caminhos(origem_id, destino_id, {origem_id}, max_trechos=3)
+        modais_permitidos = set(m.strip().lower() for m in modais_filtro if m.strip()) if modais_filtro else None
+
+        caminhos_brutos = self._dfs_caminhos(origem_id, destino_id, {origem_id}, max_trechos=3, modais_permitidos=modais_permitidos)
         if not caminhos_brutos:
             return []
 
@@ -261,4 +273,3 @@ class MotorRoteamentoMultimodal:
             opcoes.sort(key=lambda x: (x.duracao_total_minutos, x.custo_total_reais))
 
         return opcoes
-

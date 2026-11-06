@@ -1,13 +1,14 @@
 -- ==============================================================================
 -- EMBARQUE AMAZÔNIA — HUB MULTIMODAL DE TRANSPORTES PARA A AMAZÔNIA LEGAL
 -- PROJETO INTEGRADO II — CIÊNCIA DA COMPUTAÇÃO (CESUPA)
--- Esquema Físico Relacional Compatível com SQLite 3 e PostgreSQL 15+
+-- Esquema Físico Relacional
+-- Dialeto do MVP Local: SQLite 3 (com migração para PostgreSQL 15+ prevista via sequences/SERIAL)
 -- ==============================================================================
 
 -- 1. TABELA DE MODAIS
 CREATE TABLE IF NOT EXISTS modal (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo VARCHAR(30) UNIQUE NOT NULL,      -- 'barco_linha', 'voadeira', 'ferry_boat', 'onibus_intermunicipal', 'aviacao_regional'
+    codigo VARCHAR(30) UNIQUE NOT NULL,      -- 'barco_regional', 'voadeira', 'balsa_pequena', 'aviao_regional', etc.
     nome VARCHAR(100) NOT NULL,
     categoria VARCHAR(20) NOT NULL CHECK (categoria IN ('fluvial', 'rodoviario', 'aereo')),
     velocidade_media_kmh NUMERIC(5,2),
@@ -42,7 +43,7 @@ CREATE TABLE IF NOT EXISTS operador (
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. RELAÇÃO N:N OPERADOR_MODAL (Resolução do pós-mortem do Trello)
+-- 4. RELAÇÃO N:N OPERADOR_MODAL (Resolução do pós-mortem)
 CREATE TABLE IF NOT EXISTS operador_modal (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     operador_id INTEGER NOT NULL REFERENCES operador(id) ON DELETE CASCADE,
@@ -98,4 +99,3 @@ CREATE TABLE IF NOT EXISTS acomodacao_trecho (
 CREATE INDEX IF NOT EXISTS idx_trecho_origem_destino ON trecho(origem_id, destino_id);
 CREATE INDEX IF NOT EXISTS idx_trecho_operador ON trecho(operador_id);
 CREATE INDEX IF NOT EXISTS idx_trecho_atualizacao ON trecho(data_ultima_atualizacao);
-

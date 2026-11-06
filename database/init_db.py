@@ -1,11 +1,14 @@
-import sqlite3
 import os
+import sqlite3
 import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
-db_path = 'd:/Users/Kzar/Documents/Faculdade/Projeto Integrado II/database/embarque.db'
-schema_path = 'd:/Users/Kzar/Documents/Faculdade/Projeto Integrado II/database/schema.sql'
-seed_path = 'd:/Users/Kzar/Documents/Faculdade/Projeto Integrado II/database/seed.sql'
+
+# Caminhos dinâmicos baseados no diretório atual do script (compatível com qualquer máquina/SO)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(BASE_DIR, 'embarque.db')
+schema_path = os.path.join(BASE_DIR, 'schema.sql')
+seed_path = os.path.join(BASE_DIR, 'seed.sql')
 
 # Limpar arquivo prévio para reinicialização limpa
 if os.path.exists(db_path):

@@ -1,16 +1,16 @@
 """
-Embarque Amazônia — Implementação de Referência da API REST (FastAPI)
+Embarque Amazônia — Implementação da API REST (FastAPI)
 Localizado em: api/main.py
 
-Endpoints:
-  - GET /api/v1/localidades: Listagem com filtro por busca textual
-  - GET /api/v1/rotas: Busca multimodal consumindo o motor em grafo com ordenação
+Implementa os endpoints essenciais com suporte aos filtros de critérios e modais,
+além de padronizar respostas de erro de acordo com ErroPadrao do openapi.yaml.
 """
 
 import os
 import sys
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Request, status, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Adiciona o diretório api ao path
@@ -24,7 +24,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Caminho para a base relacional
+# Caminho dinâmico para a base relacional
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "embarque.db"))
 
 # Inicializa o motor de rotas
@@ -80,6 +80,11 @@ class ConsultaRotasResponse(BaseModel):
     rotas: List[OpcaoRotaResponse]
 
 
+class ErroPadraoResponse(BaseModel):
+    codigo: str
+    mensagem: str
+
+
 @app.get("/api/v1/localidades", response_model=List[LocalidadeResponse], tags=["Passageiro - Localidades"])
 def listar_localidades(busca: Optional[str] = Query(None, description="Termo para autocompletar nome da localidade")):
     if not motor.localidades and os.path.exists(DB_PATH):
@@ -95,13 +100,13 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
     return res
 
 
-@app.get("/api/v1/rotas", response_model=ConsultaRotasResponse, tags=["Passageiro - Roteamento"])
+@app.get("/api/v1/rotas", response_model=ConsultaRotasResponse, responses={404: {"model": ErroPadraoResponse}}, tags=["Passageiro - Roteamento"])
 def buscar_rotas(
-    origem: str = Query(..., description="Nome da localidade de origem"),
-    destino: str = Query(..., description="Nome da localidade de destino"),
+    origem: str = Query(..., description="Nome da localidade de origem (ex. Belém)"),
+    destino: str = Query(..., description="Nome da localidade de destino (ex. Manaus)"),
     data: Optional[str] = Query(None, description="Data pretendida da viagem (YYYY-MM-DD)"),
     criterio: Optional[str] = Query("menor_tempo", description="menor_tempo | menor_custo | mais_confiavel"),
-    modais: Optional[str] = Query(None, description="Modais permitidos separados por vírgula")
+    modais: Optional[str] = Query(None, description="Modais permitidos separados por vírgula (ex: aviao_regional,barco_regional)")
 ):
     if not motor.localidades and os.path.exists(DB_PATH):
         motor.carregar_do_banco(DB_PATH)
@@ -116,14 +121,28 @@ def buscar_rotas(
             destino_id = loc_id
 
     if not origem_id or not destino_id:
-        raise HTTPException(status_code=404, detail="Origem ou destino não localizados na malha de transporte.")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"codigo": "LOCALIDADE_NAO_ENCONTRADA", "mensagem": "Origem ou destino não localizados na malha de transporte."}
+        )
 
-    rotas_calculadas = motor.calcular_rotas(origem_id=origem_id, destino_id=destino_id, criterio=criterio)
+    # Processar filtro de modais se fornecido
+    modais_filtro = [m.strip().lower() for m in modais.split(",")] if modais else None
+
+    rotas_calculadas = motor.calcular_rotas(
+        origem_id=origem_id,
+        destino_id=destino_id,
+        criterio=criterio,
+        modais_filtro=modais_filtro
+    )
 
     if not rotas_calculadas:
-        raise HTTPException(status_code=404, detail="Nenhuma rota viável encontrada entre a origem e o destino.")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"codigo": "ROTA_NAO_ENCONTRADA", "mensagem": "Não foram encontradas opções de itinerário viáveis para o par de localidades informado com os filtros aplicados."}
+        )
 
-    # Mapear para o formato exato exigido no Card 7 do Trello
+    # Mapear para a estrutura do contrato OpenAPI
     rotas_resp = []
     for r in rotas_calculadas:
         modais_list = list(dict.fromkeys(t.modal_nome for t in r.trechos))
@@ -164,4 +183,3 @@ def buscar_rotas(
         total_opcoes=len(rotas_resp),
         rotas=rotas_resp
     )
-
