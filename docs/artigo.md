@@ -73,3 +73,4 @@ INSTITUTO DE PESQUISA ECONÔMICA APLICADA (IPEA). **Transporte Fluvial de Passag
 * **Ferramenta Utilizada:** Antigravity AI / Large Language Model (2026).
 * **Finalidade e Escopo de Aplicação:** Apoio à síntese de requisitos, geração inicial de esqueletos de código e documentação (OpenAPI e SQL), elaboração de casos de teste automatizados e suporte à revisão ortográfica e adequação ABNT.
 * **Autoria e Validação Discente:** A concepção do escopo, modelagem do domínio amazônico, levantamento factual de modais, correção manual dos algoritmos de busca e validação integral dos testes foram de responsabilidade exclusiva dos discentes autores.
+

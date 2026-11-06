@@ -1,16 +1,22 @@
 -- ==============================================================================
 -- EMBARQUE AMAZÔNIA — SEED DE DADOS ILUSTRATIVOS CANÔNICOS
--- Alinhado rigorosamente ao Card 1 e Card 6 do Trello (Dados de Exemplo Padronizados)
+-- Alinhado rigorosamente ao Card 1, Card 5 e Card 7 do Trello
+-- Contém todos os 10 modais caracterizados no projeto
 -- Compatível com SQLite e PostgreSQL
 -- ==============================================================================
 
--- 1. MODAIS
+-- 1. OS 10 MODAIS REGIONAIS DA AMAZÔNIA LEGAL (Tabela completa do domínio)
 INSERT INTO modal (id, codigo, nome, categoria, velocidade_media_kmh, requer_registro_orgao, descricao) VALUES
-(1, 'barco_linha', 'Barco Regional', 'fluvial', 18.0, 1, 'Embarcação longitudinal com conveses para rede e camarotes.'),
-(2, 'voadeira', 'Voadeira expressa', 'fluvial', 35.0, 0, 'Lancha rápida vicinal ou piloto autônomo.'),
-(3, 'ferry_boat', 'Ferry-Boat / Balsa', 'fluvial', 20.0, 1, 'Balsa para veículos e passageiros.'),
-(4, 'onibus_intermunicipal', 'Ônibus Intermunicipal', 'rodoviario', 60.0, 1, 'Linha regular rodoviária.'),
-(5, 'aviacao_regional', 'Avião regional', 'aereo', 450.0, 1, 'Aviação comercial e turboélices ligando polos e interior.');
+(1, 'barco_linha', 'Barco Regional', 'fluvial', 18.0, 1, 'Embarcação longitudinal com múltiplos conveses, leito em rede e camarotes.'),
+(2, 'voadeira', 'Voadeira expressa', 'fluvial', 35.0, 0, 'Lancha rápida vicinal ou piloto autônomo com motor de popa.'),
+(3, 'ferry_boat', 'Ferry-Boat / Balsa Ro-Ro', 'fluvial', 20.0, 1, 'Transporte conjunto de veículos, cargas e passageiros.'),
+(4, 'onibus_intermunicipal', 'Ônibus Intermunicipal', 'rodoviario', 60.0, 1, 'Linha regular rodoviária intermunicipal.'),
+(5, 'aviacao_regional', 'Avião regional', 'aereo', 450.0, 1, 'Aviação comercial regular e turboélices ligando polos e interior.'),
+(6, 'balsa_passageiro', 'Balsa Mista de Linha', 'fluvial', 15.0, 1, 'Balsa empurrada por rebocador para grandes travessias fluviais.'),
+(7, 'lancha_rapida', 'Lancha Rápida / Ajato', 'fluvial', 45.0, 1, 'Lancha rápida cabinada climatizada com poltronas.'),
+(8, 'onibus_interestadual', 'Ônibus Interestadual', 'rodoviario', 70.0, 1, 'Linhas interestaduais fiscalizadas pela ANTT.'),
+(9, 'van_cooperativa', 'Van / Transporte Complementar', 'rodoviario', 65.0, 1, 'Micro-ônibus e vans de cooperativas regionais.'),
+(10, 'aviacao_comercial_jato', 'Voo Comercial Regular (Jato)', 'aereo', 750.0, 1, 'Linhas regulares com jatos comerciais de grande porte.');
 
 -- 2. LOCALIDADES ILUSTRATIVAS (Card 1)
 INSERT INTO localidade (id, codigo_ibge, nome, uf, e_polo_regional, ativo) VALUES
@@ -29,10 +35,11 @@ INSERT INTO operador (id, razao_social, nome_fantasia, tipo_operador, cidade_bas
 (3, 'Piloto Autônomo Colaborativo', 'Piloto autônomo (cadastro colaborativo)', 'autonomo_associado', 2),
 (4, 'Oliveira Navegações da Amazônia', 'Oliveira Navegações', 'empresa_regular', 2);
 
--- 4. OPERADOR_MODAL
+-- 4. OPERADOR_MODAL (Mapeamento N:N dos modais autorizados)
 INSERT INTO operador_modal (operador_id, modal_id, numero_registro, orgao_emissor) VALUES
 (1, 1, 'ANTAQ-REG-15098', 'ANTAQ'),
 (2, 5, 'ANAC-RBAC121-AZU', 'ANAC'),
+(2, 10, 'ANAC-RBAC121-AZU', 'ANAC'),
 (3, 2, 'CAD-COLAB-9921', 'MUNICIPAL'),
 (4, 1, 'ANTAQ-REG-13045', 'ANTAQ');
 

@@ -261,3 +261,4 @@ class MotorRoteamentoMultimodal:
             opcoes.sort(key=lambda x: (x.duracao_total_minutos, x.custo_total_reais))
 
         return opcoes
+

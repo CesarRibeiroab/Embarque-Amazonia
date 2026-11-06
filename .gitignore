@@ -27,7 +27,11 @@ ENV/
 env/
 .venv/
 
-# Database files
+# Database binaries
+*.db
+*.sqlite
+*.sqlite3
+database/*.db
 database/*.db-journal
 
 # Node / Web
@@ -49,5 +53,10 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Backups
+# Backups and legacy zips
 *.zip
+Entrega_Parcial/
+Materia/
+PI2_*.md
+Relatorio_Academico_*.md
+artigo....md

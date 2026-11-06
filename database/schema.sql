@@ -98,3 +98,4 @@ CREATE TABLE IF NOT EXISTS acomodacao_trecho (
 CREATE INDEX IF NOT EXISTS idx_trecho_origem_destino ON trecho(origem_id, destino_id);
 CREATE INDEX IF NOT EXISTS idx_trecho_operador ON trecho(operador_id);
 CREATE INDEX IF NOT EXISTS idx_trecho_atualizacao ON trecho(data_ultima_atualizacao);
+

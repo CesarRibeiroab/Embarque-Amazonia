@@ -37,68 +37,54 @@ paths:
       summary: Listar e buscar localidades atendidas
       description: Retorna municípios e portos cadastrados para alimentar a busca da Home (P01/P02).
       parameters:
-        - name: q
+        - name: busca
           in: query
           description: Termo para autocompletar nome da localidade
           required: false
           schema:
             type: string
             example: Sant
-        - name: apenas_polos
-          in: query
-          description: Filtrar apenas por polos de integração regional
-          required: false
-          schema:
-            type: boolean
-            default: false
       responses:
         '200':
           description: Lista de localidades retornada com sucesso
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  total:
-                    type: integer
-                  dados:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Localidade'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Localidade'
               examples:
                 localidades_padrao:
                   summary: Localidades canônicas do sistema
                   value:
-                    total: 7
-                    dados:
-                      - id: 1
-                        nome: "Belém"
-                        uf: "PA"
-                        e_polo_regional: true
-                      - id: 2
-                        nome: "Manaus"
-                        uf: "AM"
-                        e_polo_regional: true
-                      - id: 3
-                        nome: "Santarém"
-                        uf: "PA"
-                        e_polo_regional: true
-                      - id: 4
-                        nome: "Tefé"
-                        uf: "AM"
-                        e_polo_regional: true
-                      - id: 5
-                        nome: "Parintins"
-                        uf: "AM"
-                        e_polo_regional: false
-                      - id: 6
-                        nome: "Cametá"
-                        uf: "PA"
-                        e_polo_regional: false
-                      - id: 7
-                        nome: "Alenquer"
-                        uf: "PA"
-                        e_polo_regional: false
+                    - id: 1
+                      nome: "Belém"
+                      uf: "PA"
+                      e_polo_regional: true
+                    - id: 2
+                      nome: "Manaus"
+                      uf: "AM"
+                      e_polo_regional: true
+                    - id: 3
+                      nome: "Santarém"
+                      uf: "PA"
+                      e_polo_regional: true
+                    - id: 4
+                      nome: "Tefé"
+                      uf: "AM"
+                      e_polo_regional: true
+                    - id: 5
+                      nome: "Parintins"
+                      uf: "AM"
+                      e_polo_regional: false
+                    - id: 6
+                      nome: "Cametá"
+                      uf: "PA"
+                      e_polo_regional: false
+                    - id: 7
+                      nome: "Alenquer"
+                      uf: "PA"
+                      e_polo_regional: false
 
   /rotas:
     get:
@@ -107,24 +93,25 @@ paths:
       summary: Calcular e comparar rotas multimodais (P04 / P05)
       description: |
         Motor de roteamento que percorre o grafo multimodal entre origem e destino,
-        retornando opções viáveis ordenadas segundo o critério solicitado e etiquetadas com selos:
-        'Menor custo', 'Menor tempo', 'Mais confiável' e 'Desatualizado'.
+        retornando opções viáveis ordenadas segundo o critério solicitado.
+        Os campos da resposta seguem estritamente a ordem do Card 7 do Trello:
+        modais, preco_total, duracao_total_minutos, numero_trechos, numero_conexoes, selo, atualizado_em.
       parameters:
-        - name: origem_id
+        - name: origem
           in: query
           required: true
-          description: ID da localidade de origem
+          description: Nome da localidade de origem (ex. Belém)
           schema:
-            type: integer
-            example: 1
-        - name: destino_id
+            type: string
+            example: "Belém"
+        - name: destino
           in: query
           required: true
-          description: ID da localidade de destino
+          description: Nome da localidade de destino (ex. Manaus)
           schema:
-            type: integer
-            example: 2
-        - name: data_partida
+            type: string
+            example: "Manaus"
+        - name: data
           in: query
           required: false
           description: Data pretendida da viagem (YYYY-MM-DD)
@@ -140,6 +127,13 @@ paths:
             type: string
             enum: [menor_tempo, menor_custo, mais_confiavel]
             default: menor_tempo
+        - name: modais
+          in: query
+          required: false
+          description: Filtro de modais permitidos separados por vírgula
+          schema:
+            type: string
+            example: "barco_linha,aviacao_regional"
       responses:
         '200':
           description: Opções de rotas encontradas e ranqueadas
@@ -151,26 +145,22 @@ paths:
                 rota_1_belem_manaus:
                   summary: Rota 1 Canônica (Belém -> Manaus) com opções A, B e C
                   value:
-                    origem:
-                      id: 1
-                      nome: "Belém"
-                      uf: "PA"
-                    destino:
-                      id: 2
-                      nome: "Manaus"
-                      uf: "AM"
+                    origem: "Belém"
+                    destino: "Manaus"
                     criterio_ordenacao: "menor_tempo"
                     total_opcoes: 3
                     rotas:
                       - id: "rota-1-2-2"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
-                        duracao_total_formatada: "2 h 15 min"
+                        modais: ["Avião regional"]
+                        preco_total: 780.00
                         duracao_total_minutos: 135
-                        custo_total_reais: 780.00
-                        numero_transbordos: 0
-                        texto_recencia: "Atualizado hoje"
-                        selos: ["Menor tempo", "Mais confiável"]
+                        duracao_total_formatada: "2 h 15 min"
+                        numero_trechos: 1
+                        numero_conexoes: 0
+                        selo: ["Menor tempo", "Mais confiável"]
+                        atualizado_em: "Atualizado hoje"
                         trechos:
                           - id: 2
                             origem_nome: "Belém"
@@ -185,12 +175,14 @@ paths:
                       - id: "rota-1-2-3"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
-                        duracao_total_formatada: "2 d"
+                        modais: ["Avião regional", "Barco Regional"]
+                        preco_total: 750.00
                         duracao_total_minutos: 2880
-                        custo_total_reais: 750.00
-                        numero_transbordos: 1
-                        texto_recencia: "Atualizado há 12 dias"
-                        selos: []
+                        duracao_total_formatada: "2 d"
+                        numero_trechos: 2
+                        numero_conexoes: 1
+                        selo: []
+                        atualizado_em: "Atualizado há 12 dias"
                         trechos:
                           - id: 3
                             origem_nome: "Belém"
@@ -215,12 +207,14 @@ paths:
                       - id: "rota-1-2-1"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
-                        duracao_total_formatada: "5 d 20 h"
+                        modais: ["Barco Regional"]
+                        preco_total: 350.00
                         duracao_total_minutos: 8400
-                        custo_total_reais: 350.00
-                        numero_transbordos: 0
-                        texto_recencia: "Atualizado há 3 dias"
-                        selos: ["Menor custo"]
+                        duracao_total_formatada: "5 d 20 h"
+                        numero_trechos: 1
+                        numero_conexoes: 0
+                        selo: ["Menor custo"]
+                        atualizado_em: "Atualizado há 3 dias"
                         trechos:
                           - id: 1
                             origem_nome: "Belém"
@@ -232,38 +226,6 @@ paths:
                             duracao_minutos: 8400
                             tarifa_reais: 350.00
                             data_ultima_atualizacao: "2026-11-03"
-                rota_2_manaus_tefe:
-                  summary: Rota 2 Canônica (Manaus -> Tefé)
-                  value:
-                    origem:
-                      id: 2
-                      nome: "Manaus"
-                      uf: "AM"
-                    destino:
-                      id: 4
-                      nome: "Tefé"
-                      uf: "AM"
-                    criterio_ordenacao: "menor_tempo"
-                    total_opcoes: 2
-                    rotas:
-                      - id: "rota-2-4-1"
-                        origem_nome: "Manaus"
-                        destino_nome: "Tefé"
-                        duracao_total_formatada: "11 h"
-                        duracao_total_minutos: 660
-                        custo_total_reais: 320.00
-                        numero_transbordos: 0
-                        texto_recencia: "Atualizado há 20 dias"
-                        selos: ["Menor tempo"]
-                      - id: "rota-2-4-2"
-                        origem_nome: "Manaus"
-                        destino_nome: "Tefé"
-                        duracao_total_formatada: "1 d 12 h"
-                        duracao_total_minutos: 2160
-                        custo_total_reais: 190.00
-                        numero_transbordos: 0
-                        texto_recencia: "Atualizado há 5 dias"
-                        selos: ["Menor custo", "Mais confiável"]
 
         '404':
           description: Nenhuma rota viável encontrada entre a origem e o destino (caso Cametá-Alenquer)
@@ -272,12 +234,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErroPadrao'
 
+  /rotas/{id}:
+    get:
+      tags:
+        - Passageiro - Roteamento
+      summary: Obter detalhe de uma rota (P06 / P07)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "rota-1-2-3"
+      responses:
+        '200':
+          description: Detalhes da rota e seus trechos retornados com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpcaoRota'
+
   /trechos:
     get:
       tags:
         - Administrador - Cadastro
       summary: Listar trechos cadastrados (Tela A02 - Painel Administrativo)
-      description: Retorna a malha de trechos gerenciados pelo operador autenticado.
       parameters:
         - name: operador_id
           in: query
@@ -298,7 +279,6 @@ paths:
       tags:
         - Administrador - Cadastro
       summary: Cadastrar novo trecho na malha (Tela A03)
-      description: Insere uma nova aresta no grafo de transportes.
       requestBody:
         required: true
         content:
@@ -431,28 +411,36 @@ components:
         destino_nome:
           type: string
           example: "Manaus"
-        duracao_total_formatada:
-          type: string
-          example: "5 d 20 h"
-        duracao_total_minutos:
-          type: integer
-          example: 8400
-        custo_total_reais:
+        modais:
+          type: array
+          items:
+            type: string
+          example: ["Barco Regional"]
+        preco_total:
           type: number
           format: float
           example: 350.00
-        numero_transbordos:
+        duracao_total_minutos:
+          type: integer
+          example: 8400
+        duracao_total_formatada:
+          type: string
+          example: "5 d 20 h"
+        numero_trechos:
+          type: integer
+          example: 1
+        numero_conexoes:
           type: integer
           example: 0
-        texto_recencia:
-          type: string
-          example: "Atualizado há 3 dias"
-        selos:
+        selo:
           type: array
           items:
             type: string
             enum: [Menor custo, Menor tempo, Mais confiável, Desatualizado]
           example: ["Menor custo"]
+        atualizado_em:
+          type: string
+          example: "Atualizado há 3 dias"
         trechos:
           type: array
           items:
@@ -462,9 +450,11 @@ components:
       type: object
       properties:
         origem:
-          $ref: '#/components/schemas/Localidade'
+          type: string
+          example: "Belém"
         destino:
-          $ref: '#/components/schemas/Localidade'
+          type: string
+          example: "Manaus"
         criterio_ordenacao:
           type: string
           example: "menor_tempo"
