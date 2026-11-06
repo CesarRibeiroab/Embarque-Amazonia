@@ -1,0 +1,549 @@
+openapi: 3.1.0
+info:
+  title: Embarque Amazônia — REST API
+  description: |
+    API de Roteamento Multimodal e Gestão de Malha de Transportes para a Amazônia Legal.
+    Desenvolvida no âmbito do Projeto Integrado II (Bacharelado em Ciência da Computação - CESUPA).
+    
+    Integra serviços de transporte hidroviário (barcos regionais, voadeiras, balsas),
+    rodoviário e aéreo regional, oferecendo cálculo de itinerários sob três funções de custo:
+    1. **menor_tempo**: Minimização do tempo total de deslocamento e conexões.
+    2. **menor_custo**: Minimização da tarifa monetária acumulada.
+    3. **mais_confiavel**: Maximização da confiabilidade baseada na recência da atualização dos dados.
+  version: 1.0.0
+  contact:
+    name: César Augusto Borges Ribeiro (Coordenação Técnica)
+    email: cesar24070011@aluno.cesupa.br
+
+servers:
+  - url: http://127.0.0.1:4010/api/v1
+    description: Mock Server Local (Prism CLI)
+  - url: http://localhost:8000/api/v1
+    description: Servidor da API em Python / FastAPI
+
+tags:
+  - name: Passageiro - Roteamento
+    description: Consulta e planejamento de rotas multimodais
+  - name: Passageiro - Localidades
+    description: Catálogo de municípios e portos atendidos
+  - name: Administrador - Cadastro
+    description: Endpoints para alimentação e manutenção da malha por operadores (Telas A01-A06)
+
+paths:
+  /localidades:
+    get:
+      tags:
+        - Passageiro - Localidades
+      summary: Listar e buscar localidades atendidas
+      description: Retorna municípios e portos cadastrados para alimentar a busca da Home (P01/P02).
+      parameters:
+        - name: q
+          in: query
+          description: Termo para autocompletar nome da localidade
+          required: false
+          schema:
+            type: string
+            example: Sant
+        - name: apenas_polos
+          in: query
+          description: Filtrar apenas por polos de integração regional
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Lista de localidades retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  dados:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Localidade'
+              examples:
+                localidades_padrao:
+                  summary: Localidades canônicas do sistema
+                  value:
+                    total: 7
+                    dados:
+                      - id: 1
+                        nome: "Belém"
+                        uf: "PA"
+                        e_polo_regional: true
+                      - id: 2
+                        nome: "Manaus"
+                        uf: "AM"
+                        e_polo_regional: true
+                      - id: 3
+                        nome: "Santarém"
+                        uf: "PA"
+                        e_polo_regional: true
+                      - id: 4
+                        nome: "Tefé"
+                        uf: "AM"
+                        e_polo_regional: true
+                      - id: 5
+                        nome: "Parintins"
+                        uf: "AM"
+                        e_polo_regional: false
+                      - id: 6
+                        nome: "Cametá"
+                        uf: "PA"
+                        e_polo_regional: false
+                      - id: 7
+                        nome: "Alenquer"
+                        uf: "PA"
+                        e_polo_regional: false
+
+  /rotas:
+    get:
+      tags:
+        - Passageiro - Roteamento
+      summary: Calcular e comparar rotas multimodais (P04 / P05)
+      description: |
+        Motor de roteamento que percorre o grafo multimodal entre origem e destino,
+        retornando opções viáveis ordenadas segundo o critério solicitado e etiquetadas com selos:
+        'Menor custo', 'Menor tempo', 'Mais confiável' e 'Desatualizado'.
+      parameters:
+        - name: origem_id
+          in: query
+          required: true
+          description: ID da localidade de origem
+          schema:
+            type: integer
+            example: 1
+        - name: destino_id
+          in: query
+          required: true
+          description: ID da localidade de destino
+          schema:
+            type: integer
+            example: 2
+        - name: data_partida
+          in: query
+          required: false
+          description: Data pretendida da viagem (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2026-11-20"
+        - name: criterio
+          in: query
+          required: false
+          description: Critério de ordenação das opções
+          schema:
+            type: string
+            enum: [menor_tempo, menor_custo, mais_confiavel]
+            default: menor_tempo
+      responses:
+        '200':
+          description: Opções de rotas encontradas e ranqueadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultaRotasResposta'
+              examples:
+                rota_1_belem_manaus:
+                  summary: Rota 1 Canônica (Belém -> Manaus) com opções A, B e C
+                  value:
+                    origem:
+                      id: 1
+                      nome: "Belém"
+                      uf: "PA"
+                    destino:
+                      id: 2
+                      nome: "Manaus"
+                      uf: "AM"
+                    criterio_ordenacao: "menor_tempo"
+                    total_opcoes: 3
+                    rotas:
+                      - id: "rota-1-2-2"
+                        origem_nome: "Belém"
+                        destino_nome: "Manaus"
+                        duracao_total_formatada: "2 h 15 min"
+                        duracao_total_minutos: 135
+                        custo_total_reais: 780.00
+                        numero_transbordos: 0
+                        texto_recencia: "Atualizado hoje"
+                        selos: ["Menor tempo", "Mais confiável"]
+                        trechos:
+                          - id: 2
+                            origem_nome: "Belém"
+                            destino_nome: "Manaus"
+                            modal_nome: "Avião regional"
+                            operador_nome: "Azul"
+                            terminal_origem_nome: "Aeroporto Internacional de Belém"
+                            terminal_destino_nome: "Aeroporto Eduardo Gomes"
+                            duracao_minutos: 135
+                            tarifa_reais: 780.00
+                            data_ultima_atualizacao: "2026-11-06"
+                      - id: "rota-1-2-3"
+                        origem_nome: "Belém"
+                        destino_nome: "Manaus"
+                        duracao_total_formatada: "2 d"
+                        duracao_total_minutos: 2880
+                        custo_total_reais: 750.00
+                        numero_transbordos: 1
+                        texto_recencia: "Atualizado há 12 dias"
+                        selos: []
+                        trechos:
+                          - id: 3
+                            origem_nome: "Belém"
+                            destino_nome: "Santarém"
+                            modal_nome: "Avião regional"
+                            operador_nome: "Azul"
+                            terminal_origem_nome: "Aeroporto de Belém"
+                            terminal_destino_nome: "Aeroporto de Santarém"
+                            duracao_minutos: 80
+                            tarifa_reais: 540.00
+                            data_ultima_atualizacao: "2026-10-25"
+                          - id: 4
+                            origem_nome: "Santarém"
+                            destino_nome: "Manaus"
+                            modal_nome: "Barco regional"
+                            operador_nome: "Amazon Star"
+                            terminal_origem_nome: "Porto de Santarém"
+                            terminal_destino_nome: "Porto da Manaus Moderna"
+                            duracao_minutos: 2520
+                            tarifa_reais: 210.00
+                            data_ultima_atualizacao: "2026-10-25"
+                      - id: "rota-1-2-1"
+                        origem_nome: "Belém"
+                        destino_nome: "Manaus"
+                        duracao_total_formatada: "5 d 20 h"
+                        duracao_total_minutos: 8400
+                        custo_total_reais: 350.00
+                        numero_transbordos: 0
+                        texto_recencia: "Atualizado há 3 dias"
+                        selos: ["Menor custo"]
+                        trechos:
+                          - id: 1
+                            origem_nome: "Belém"
+                            destino_nome: "Manaus"
+                            modal_nome: "Barco Regional"
+                            operador_nome: "Amazon Star"
+                            terminal_origem_nome: "Porto de Belém"
+                            terminal_destino_nome: "Porto da Manaus Moderna"
+                            duracao_minutos: 8400
+                            tarifa_reais: 350.00
+                            data_ultima_atualizacao: "2026-11-03"
+                rota_2_manaus_tefe:
+                  summary: Rota 2 Canônica (Manaus -> Tefé)
+                  value:
+                    origem:
+                      id: 2
+                      nome: "Manaus"
+                      uf: "AM"
+                    destino:
+                      id: 4
+                      nome: "Tefé"
+                      uf: "AM"
+                    criterio_ordenacao: "menor_tempo"
+                    total_opcoes: 2
+                    rotas:
+                      - id: "rota-2-4-1"
+                        origem_nome: "Manaus"
+                        destino_nome: "Tefé"
+                        duracao_total_formatada: "11 h"
+                        duracao_total_minutos: 660
+                        custo_total_reais: 320.00
+                        numero_transbordos: 0
+                        texto_recencia: "Atualizado há 20 dias"
+                        selos: ["Menor tempo"]
+                      - id: "rota-2-4-2"
+                        origem_nome: "Manaus"
+                        destino_nome: "Tefé"
+                        duracao_total_formatada: "1 d 12 h"
+                        duracao_total_minutos: 2160
+                        custo_total_reais: 190.00
+                        numero_transbordos: 0
+                        texto_recencia: "Atualizado há 5 dias"
+                        selos: ["Menor custo", "Mais confiável"]
+
+        '404':
+          description: Nenhuma rota viável encontrada entre a origem e o destino (caso Cametá-Alenquer)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+
+  /trechos:
+    get:
+      tags:
+        - Administrador - Cadastro
+      summary: Listar trechos cadastrados (Tela A02 - Painel Administrativo)
+      description: Retorna a malha de trechos gerenciados pelo operador autenticado.
+      parameters:
+        - name: operador_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Lista de trechos cadastrados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrechoDetalhado'
+    post:
+      tags:
+        - Administrador - Cadastro
+      summary: Cadastrar novo trecho na malha (Tela A03)
+      description: Insere uma nova aresta no grafo de transportes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoTrechoRequisicao'
+      responses:
+        '201':
+          description: Trecho criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrechoDetalhado'
+
+  /operadores:
+    post:
+      tags:
+        - Administrador - Cadastro
+      summary: Cadastrar operador ou cooperativa (Tela A04)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovoOperadorRequisicao'
+      responses:
+        '201':
+          description: Operador cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operador'
+
+components:
+  schemas:
+    Localidade:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nome:
+          type: string
+          example: "Belém"
+        uf:
+          type: string
+          example: "PA"
+        e_polo_regional:
+          type: boolean
+          example: true
+
+    Modal:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo:
+          type: string
+          example: "barco_linha"
+        nome:
+          type: string
+          example: "Barco Regional"
+        categoria:
+          type: string
+          enum: [fluvial, rodoviario, aereo]
+          example: "fluvial"
+
+    Operador:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        razao_social:
+          type: string
+          example: "Amazon Star Navegações Ltda"
+        nome_fantasia:
+          type: string
+          example: "Amazon Star"
+        tipo_operador:
+          type: string
+          example: "empresa_regular"
+
+    TrechoItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        origem_nome:
+          type: string
+          example: "Belém"
+        destino_nome:
+          type: string
+          example: "Manaus"
+        modal_nome:
+          type: string
+          example: "Barco Regional"
+        operador_nome:
+          type: string
+          example: "Amazon Star"
+        terminal_origem_nome:
+          type: string
+          example: "Porto de Belém"
+        terminal_destino_nome:
+          type: string
+          example: "Porto da Manaus Moderna"
+        duracao_minutos:
+          type: integer
+          example: 8400
+        tarifa_reais:
+          type: number
+          format: float
+          example: 350.00
+        data_ultima_atualizacao:
+          type: string
+          format: date
+          example: "2026-11-03"
+
+    OpcaoRota:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "rota-1-2-1"
+        origem_nome:
+          type: string
+          example: "Belém"
+        destino_nome:
+          type: string
+          example: "Manaus"
+        duracao_total_formatada:
+          type: string
+          example: "5 d 20 h"
+        duracao_total_minutos:
+          type: integer
+          example: 8400
+        custo_total_reais:
+          type: number
+          format: float
+          example: 350.00
+        numero_transbordos:
+          type: integer
+          example: 0
+        texto_recencia:
+          type: string
+          example: "Atualizado há 3 dias"
+        selos:
+          type: array
+          items:
+            type: string
+            enum: [Menor custo, Menor tempo, Mais confiável, Desatualizado]
+          example: ["Menor custo"]
+        trechos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrechoItem'
+
+    ConsultaRotasResposta:
+      type: object
+      properties:
+        origem:
+          $ref: '#/components/schemas/Localidade'
+        destino:
+          $ref: '#/components/schemas/Localidade'
+        criterio_ordenacao:
+          type: string
+          example: "menor_tempo"
+        total_opcoes:
+          type: integer
+          example: 3
+        rotas:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpcaoRota'
+
+    TrechoDetalhado:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        origem_id:
+          type: integer
+        destino_id:
+          type: integer
+        operador_id:
+          type: integer
+        modal_id:
+          type: integer
+        duracao_estimada_minutos:
+          type: integer
+        tarifa_base_reais:
+          type: number
+
+    NovoTrechoRequisicao:
+      type: object
+      required:
+        - origem_id
+        - destino_id
+        - operador_id
+        - modal_id
+        - duracao_estimada_minutos
+        - tarifa_base_reais
+      properties:
+        origem_id:
+          type: integer
+          example: 1
+        destino_id:
+          type: integer
+          example: 2
+        operador_id:
+          type: integer
+          example: 1
+        modal_id:
+          type: integer
+          example: 1
+        duracao_estimada_minutos:
+          type: integer
+          example: 8400
+        tarifa_base_reais:
+          type: number
+          example: 350.00
+
+    NovoOperadorRequisicao:
+      type: object
+      required:
+        - razao_social
+        - tipo_operador
+      properties:
+        razao_social:
+          type: string
+          example: "Amazon Star Navegações Ltda"
+        tipo_operador:
+          type: string
+          enum: [empresa_regular, cooperativa, autonomo_associado]
+          example: "empresa_regular"
+
+    ErroPadrao:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "ROTA_NAO_ENCONTRADA"
+        mensagem:
+          type: string
+          example: "Não foram encontradas opções de itinerário viáveis para o par de localidades informado."
