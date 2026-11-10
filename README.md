@@ -23,8 +23,8 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 │   ├── engine/           # Motor de cálculo em grafo ponderado multimodal
 │   │   └── route_engine.py
 │   ├── tests/            # Suítes de testes unitários e de integração
-│   │   ├── test_route_engine.py  # 8 testes de aceitação do motor
-│   │   └── test_api.py           # Testes dos endpoints HTTP com TestClient
+│   │   ├── test_route_engine.py  # 13 testes de aceitação do motor
+│   │   └── test_api.py           # 11 testes dos endpoints HTTP com TestClient
 │   ├── main.py           # Implementação dos endpoints da API (/localidades e /rotas)
 │   └── requirements.txt  # Dependências com versões estritas fixadas
 ├── database/             # Modelagem de dados e scripts SQL
@@ -36,12 +36,12 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 │   ├── artigo.md         # Texto acadêmico (Resumo, Introdução, Referências e Declaração IA)
 │   ├── decisoes.md       # Decisões técnicas de MVP, stack e roteiro de orientação
 │   └── inventario_telas.md # Mapa de navegação e inventário funcional das 16 telas
-└── web/                  # Front-end React + Vite PWA (em desenvolvimento)
+└── web/                  # Front-end React + Vite PWA (esqueleto funcional com tela de busca)
 ```
 
 > [!NOTE]
 > **Estratégia de Banco:** SQLite em desenvolvimento local; PostgreSQL previsto para homologação e entrega final. O arquivo de banco binário local (`embarque.db`) é gerado dinamicamente a partir dos scripts `schema.sql` e `seed.sql` através do comando `python database/init_db.py`, sendo mantido fora do versionamento via `.gitignore`.
-> **Contrato da API:** A fonte canônica da verdade para o contrato é a especificação formal `docs/openapi.yaml`, escrita antes da implementação para orientar simultaneamente o back-end e o front-end. O FastAPI implementa rigorosamente esse contrato.
+> **Contrato da API:** A fonte canônica da verdade para o contrato é a especificação formal `docs/openapi.yaml`, escrita antes da implementação para orientar simultaneamente o back-end e o front-end. O FastAPI implementa os endpoints de consulta do passageiro deste contrato, com os endpoints administrativos de cadastro previstos para a Semana 2.
 
 ---
 
@@ -63,19 +63,19 @@ python database/init_db.py
 > O ambiente local utiliza SQLite para simplificar execução e testes do protótipo. A migração para PostgreSQL está prevista para o ambiente de homologação, com DDL documentado no cabeçalho de `database/schema.sql`.
 
 ### 2. Executar a Suíte de Testes Automatizados
-O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP (**14 testes ao todo**):
+O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP (**24 testes ao todo**):
 
-* **Testes do Motor de Rotas (8 testes):**
+* **Testes do Motor de Rotas (13 testes):**
 ```bash
 python api/tests/test_route_engine.py
 ```
-*Saída esperada:* `Ran 8 tests in 0.020s - OK`
+*Saída esperada:* `Ran 13 tests in 0.020s - OK` (cobre conexões temporais, rejeição de horários impossíveis, rotas canônicas 1, 2 e 3, recência/selos, filtro de dias da semana, filtro de modais, origem igual a destino, idempotência de recarga e IDs determinísticos).
 
-* **Testes de Integração da API REST (6 testes):**
+* **Testes de Integração da API REST (11 testes):**
 ```bash
 python api/tests/test_api.py
 ```
-*Saída esperada:* `Ran 6 tests in 0.420s - OK` (cobre localidades, busca multicritério, filtro de modais, ausência de rotas viáveis, erro 404 para localidade desconhecida e normalização de acentos/retorno).
+*Saída esperada:* `Ran 11 tests in 0.200s - OK` (cobre listagem de localidades, busca multicritério, filtro de modais, rotas sem conexão com lista vazia 200 OK, erro 404 para localidade desconhecida, busca sem acentos, fluxo de retorno, validação 422 para parâmetros/datas/origem e persistência de IDs/datas ISO).
 
 ### 3. Executar o Servidor FastAPI
 Para subir o servidor da API com recarregamento dinâmico:
@@ -89,7 +89,7 @@ Com o servidor ativo:
 * **Catálogo de Localidades:** `http://localhost:8000/api/v1/localidades`
 
 > [!NOTE]
-> O FastAPI implementa atualmente os endpoints essenciais do passageiro (`/api/v1/localidades`, `/api/v1/rotas` com suporte a filtros de `modais`, ordenação por `criterio` e normalização fonética/acentuação). O CRUD da área administrativa de cadastro (telas A01–A06) está planejado para o marco da Semana 2.
+> O FastAPI implementa os endpoints essenciais de consulta do passageiro (`/api/v1/localidades`, `/api/v1/rotas` com suporte a filtros de `modais`, ordenação por `criterio`, validação estrita de datas/parâmetros e busca sem acentos). O CRUD da área administrativa de cadastro (telas A01–A06) está planejado para o marco da Semana 2.
 
 ### 4. Executar o Mock Server da API (Prism CLI)
 Caso deseje testar a simulação estática do contrato OpenAPI 3.1:
@@ -97,8 +97,18 @@ Caso deseje testar a simulação estática do contrato OpenAPI 3.1:
 ```bash
 npx @stoplight/prism-cli mock docs/openapi.yaml --port 4010
 ```
-* **Localidades no Mock:** `http://127.0.0.1:4010/localidades`
-* **Rotas Belém → Manaus no Mock:** `http://127.0.0.1:4010/rotas?origem=Belém&destino=Manaus`
+* **Localidades no Mock:** `http://127.0.0.1:4010/api/v1/localidades`
+* **Rotas Belém → Manaus no Mock:** `http://127.0.0.1:4010/api/v1/rotas?origem=Belém&destino=Manaus`
+
+### 5. Executar a Aplicação Web PWA (React + Vite)
+Para subir o esqueleto funcional da interface do passageiro (`web/`):
+
+```bash
+cd web
+npm install
+npm run dev
+```
+Acesse no navegador: `http://localhost:5173` (conectando-se automaticamente à API FastAPI em `localhost:8000` via CORS).
 
 > [!TIP]
 > O Prism CLI simula os payloads documentados no contrato OpenAPI para permitir que a equipe de front-end programe os componentes de interface antes da subida da API real. A computação algorítmica dinâmica reside no servidor FastAPI e no motor em Python.

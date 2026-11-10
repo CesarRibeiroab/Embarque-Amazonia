@@ -1,7 +1,7 @@
 # EMBARQUE AMAZÔNIA — DECISÕES TÉCNICAS E ROTEIRO DE ORIENTAÇÃO
 **Documento Executivo de Alinhamento para Reunião com o Professor**  
 **Projeto Integrado II • Ciência da Computação (CESUPA)**  
-**Data:** 06/11/2026  
+**Data:** 10/11/2026  
 **Autores:** César Augusto Borges Ribeiro, Fernando César Mourão Fonseca, Herbert Aciolly Leão de Jesus, Lucas Barros Mutran  
 
 ---
@@ -47,7 +47,7 @@
 ### Decisão 4: Declaração Real de Uso de Inteligência Artificial Generativa
 *Em estrito cumprimento à Resolução nº 001/2026 do CESUPA:*
 - **Ferramenta Utilizada:** Antigravity AI / Large Language Models.
-- **Atuação Efetiva da Ferramenta:** A IA atuou como aceleradora técnica de desenvolvimento de software: gerou o esqueleto inicial do contrato OpenAPI (`docs/openapi.yaml`), a estrutura base do script SQL (`schema.sql` e `seed.sql`), o algoritmo preliminar de busca em profundidade com poda (`api/engine/route_engine.py`), a suíte de testes unitários (`api/tests/test_route_engine.py`), a integração FastAPI (`api/main.py` e `api/tests/test_api.py`) e apoiou a revisão ortográfica e formatação ABNT da Introdução.
+- **Atuação Efetiva da Ferramenta:** Um agente autônomo de IA operou diretamente no repositório realizando edição de código, criação de esquemas DDL e commits no Git. A ferramenta acelerou a implementação: gerou o esqueleto do contrato OpenAPI (`docs/openapi.yaml`), o script SQL (`schema.sql` e `seed.sql`), o algoritmo em profundidade com poda (`api/engine/route_engine.py`), a suíte de testes unitários e de integração (`api/tests/`), os endpoints FastAPI (`api/main.py`), o esqueleto web React+Vite (`web/`) e apoiou a revisão ortográfica e formatação ABNT da Introdução.
 - **Atuação dos Discentes:** Concepção da arquitetura e dos requisitos, definição dos parâmetros e regras de negócio da Amazônia Legal, parametrização dos dados de teste, auditoria de consistência, correção manual das incongruências do motor e do banco, e validação funcional de todos os testes no terminal. Cada integrante domina a lógica do que foi construído em suas respectivas frentes.
 
 ---
@@ -75,13 +75,11 @@ A especificação OpenAPI 3.1 no docs/openapi.yaml documenta a busca com os trê
 
 [1:45 - 2:30] DEMONSTRAÇÃO DO MOTOR E DA API FASTAPI (AO VIVO)
 [Executar: python api/tests/test_route_engine.py && python api/tests/test_api.py]
-"Temos 14 testes automatizados passando 100%:
-- Na Rota 1 (Belém–Manaus), calcula as 3 opções (barco, avião e combinada via Santarém),
-  calculando dinamicamente a conexão de 4h 40min e atribuindo os selos corretos.
-- Na Rota 2 (Manaus–Tefé), compara voadeira e barco regional.
-- Na Rota 3 (Cametá–Alenquer), devolve 200 OK com lista vazia para pares sem malha viável (tela P10a).
-- Rejeita conexões com horários impossíveis, filtra por modais e por dias da semana da viagem,
-  suporta rotas de retorno (ida e volta), aceita buscas sem acentuação e sinaliza dados desatualizados.
+"Temos 24 testes automatizados passando 100%:
+- 13 testes unitários no motor (cálculo dinâmico de conexão, rejeição temporal de partidas anteriores,
+  Rotas 1, 2 e 3, recência/desatualização, filtro por dia da semana e modais, e idempotência).
+- 11 testes de integração HTTP na API REST (busca multicritério, sem resultados 200 OK,
+  validação 422 de parâmetros/datas/origem e persistência de IDs determinísticos).
 Ao subir o FastAPI com uvicorn api.main:app, podemos ver a busca funcionando no Swagger UI."
 
 [2:30 - 3:00] ALINHAMENTO DAS DIRETRIZES DA ENTREGA FINAL

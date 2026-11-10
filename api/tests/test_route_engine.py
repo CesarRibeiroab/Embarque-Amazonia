@@ -81,6 +81,41 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
         self.assertGreater(rota_desatualizada.dias_max_desatualizacao, 30)
         self.assertIn("Desatualizado", rota_desatualizada.selos, "Trechos com mais de 30 dias devem receber o selo 'Desatualizado'")
 
+    def test_09_filtro_por_dia_da_semana(self):
+        # Sexta-feira (20/11/2026): todas as 3 opções (A, B e C) operam
+        rotas_sexta = self.motor.calcular_rotas(origem_id=1, destino_id=2, data_viagem="2026-11-20")
+        self.assertEqual(len(rotas_sexta), 3, "Na sexta-feira (20/11/2026), as 3 opções A, B e C devem estar ativas")
+
+        # Sábado (2026-11-21): Barco de linha não sai aos sábados. Apenas o voo diário (Opção B) opera
+        rotas_sabado = self.motor.calcular_rotas(origem_id=1, destino_id=2, data_viagem="2026-11-21")
+        self.assertEqual(len(rotas_sabado), 1, "No sábado, apenas o voo diário deve estar ativo")
+        self.assertEqual(rotas_sabado[0].trechos[0].modal_codigo, "aviao_regional")
+
+    def test_10_filtro_por_modais(self):
+        # Filtro estrito para aviação regional
+        rotas_ar = self.motor.calcular_rotas(origem_id=1, destino_id=2, modais_filtro=["aviao_regional"])
+        self.assertEqual(len(rotas_ar), 1)
+        self.assertEqual(rotas_ar[0].trechos[0].modal_codigo, "aviao_regional")
+
+    def test_11_origem_igual_destino_devolve_lista_vazia(self):
+        # Belém -> Belém deve retornar lista vazia
+        rotas_mesmo = self.motor.calcular_rotas(origem_id=1, destino_id=1)
+        self.assertEqual(len(rotas_mesmo), 0, "Origem igual ao destino não pode gerar rota viável")
+
+    def test_12_recarga_do_banco_idempotente(self):
+        # Recarregar o banco uma segunda vez não pode multiplicar arestas
+        self.motor.carregar_do_banco(self.db_path)
+        rotas = self.motor.calcular_rotas(origem_id=1, destino_id=2, criterio="menor_tempo")
+        self.assertEqual(len(rotas), 3, "Após recarga, Belém -> Manaus deve continuar devolvendo exatamente 3 opções")
+
+    def test_13_id_deterministico_baseado_em_trechos(self):
+        rotas = self.motor.calcular_rotas(origem_id=1, destino_id=2, criterio="menor_tempo")
+        # Checar se os IDs seguem o padrão 'rota-t{ids}'
+        ids = [r.id for r in rotas]
+        self.assertIn("rota-t2", ids, "Voo direto deve ter id 'rota-t2'")
+        self.assertIn("rota-t1", ids, "Barco direto deve ter id 'rota-t1'")
+        self.assertIn("rota-t3-t4", ids, "Combinada deve ter id 'rota-t3-t4'")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

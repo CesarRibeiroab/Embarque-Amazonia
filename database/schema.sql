@@ -24,8 +24,10 @@ CREATE TABLE IF NOT EXISTS modal (
 CREATE TABLE IF NOT EXISTS localidade (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     codigo_ibge VARCHAR(7),
+    codigo_iata VARCHAR(3),                  -- ex: 'BEL', 'MAO', 'STM' (Tela A05)
     nome VARCHAR(120) NOT NULL,
     uf CHAR(2) NOT NULL,
+    tipo VARCHAR(30) DEFAULT 'municipio' CHECK (tipo IN ('municipio', 'polo_regional', 'porto', 'aeroporto', 'comunidade', 'terminal_rodoviario')),
     latitude NUMERIC(10,7),
     longitude NUMERIC(10,7),
     e_polo_regional BOOLEAN DEFAULT 0,
@@ -71,6 +73,7 @@ CREATE TABLE IF NOT EXISTS trecho (
     duracao_estimada_minutos INTEGER NOT NULL,  -- tempo de viagem em condições normais
     tarifa_base_reais NUMERIC(10,2) NOT NULL,   -- tarifa econômica básica
     tempo_conexao_espera_minutos INTEGER DEFAULT 45, -- tempo mínimo de espera/transbordo
+    sentido VARCHAR(10) DEFAULT 'ida' CHECK (sentido IN ('ida', 'volta', 'circular')), -- Telas A02 e A03
     regime_hidrico_observacao TEXT,            -- 'Normal', 'Período de Vazante (sujeito a bancos de areia)', etc.
     fator_sazonal_opcional NUMERIC(3,2) DEFAULT 1.00,
     data_ultima_atualizacao DATE NOT NULL DEFAULT (CURRENT_DATE), -- Base para o cálculo de recência
@@ -90,11 +93,12 @@ CREATE TABLE IF NOT EXISTS horario_operacao (
     ativo BOOLEAN DEFAULT 1
 );
 
--- 7. ACOMODAÇÕES E TARIFAS DIFERENCIADAS (Fluvial)
+-- 7. ACOMODAÇÕES E TARIFAS DIFERENCIADAS (Fluvial e Regimes)
 CREATE TABLE IF NOT EXISTS acomodacao_trecho (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trecho_id INTEGER NOT NULL REFERENCES trecho(id) ON DELETE CASCADE,
     tipo VARCHAR(40) NOT NULL CHECK (tipo IN ('rede', 'cadeira_inclinavel', 'camarote_duplo', 'camarote_quadruplo', 'suite', 'assento_padrao')),
+    regime VARCHAR(20) DEFAULT 'fixo' CHECK (regime IN ('fixo', 'dinamico', 'sob_consulta')), -- Telas A03 e Modelo
     valor_total_reais NUMERIC(10,2) NOT NULL,
     descricao TEXT
 );

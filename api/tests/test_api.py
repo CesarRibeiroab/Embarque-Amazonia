@@ -85,6 +85,44 @@ class TesteFastAPIEndpoints(unittest.TestCase):
         data = response.json()
         self.assertGreaterEqual(data["total_opcoes"], 2)  # Retorno via avião e barco regional
 
+    def test_07_validacao_origem_igual_destino_422(self):
+        response = self.client.get("/api/v1/rotas?origem=Belém&destino=Belém")
+        self.assertEqual(response.status_code, 422)
+        data = response.json()
+        self.assertEqual(data["codigo"], "PARAMETRO_INVALIDO")
+        self.assertIn("mesma localidade", data["mensagem"])
+
+    def test_08_validacao_criterio_invalido_422(self):
+        response = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&criterio=criterio_inexistente")
+        self.assertEqual(response.status_code, 422)
+        data = response.json()
+        self.assertEqual(data["codigo"], "PARAMETRO_INVALIDO")
+
+    def test_09_validacao_formato_data_invalida_422(self):
+        response = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&data=20/11/2026")
+        self.assertEqual(response.status_code, 422)
+        data = response.json()
+        self.assertEqual(data["codigo"], "PARAMETRO_INVALIDO")
+
+    def test_10_filtro_data_viagem_sexta_vs_sabado(self):
+        # Sexta-feira 2026-11-20 -> 3 opções
+        resp_sexta = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&data=2026-11-20")
+        self.assertEqual(resp_sexta.status_code, 200)
+        self.assertEqual(resp_sexta.json()["total_opcoes"], 3)
+
+        # Sábado 2026-11-21 -> 1 opção (voo diário)
+        resp_sabado = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&data=2026-11-21")
+        self.assertEqual(resp_sabado.status_code, 200)
+        self.assertEqual(resp_sabado.json()["total_opcoes"], 1)
+
+    def test_11_campos_iso_e_id_deterministico(self):
+        response = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus")
+        self.assertEqual(response.status_code, 200)
+        primeira = response.json()["rotas"][0]
+        self.assertTrue(primeira["id"].startswith("rota-t"))
+        self.assertIn("data_atualizacao_iso", primeira)
+        self.assertIn("dias_desde_atualizacao", primeira)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

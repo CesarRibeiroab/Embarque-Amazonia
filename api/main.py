@@ -2,15 +2,18 @@
 Embarque Amazônia — Implementação da API REST (FastAPI)
 Localizado em: api/main.py
 
-Implementa os endpoints essenciais com suporte aos filtros de critérios e modais,
+Implementa os endpoints essenciais com suporte aos filtros de critérios, modais e data,
 além de padronizar respostas de erro de acordo com ErroPadrao do openapi.yaml.
 """
 
+from contextlib import asynccontextmanager
+from datetime import datetime
 import os
 import sys
 import unicodedata
 from typing import List, Optional
 from fastapi import FastAPI, Request, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -26,11 +29,6 @@ def normalizar_texto(texto: Optional[str]) -> str:
         return ""
     return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').strip().lower()
 
-app = FastAPI(
-    title="Embarque Amazônia — REST API",
-    description="API de Roteamento Multimodal e Gestão de Malha de Transportes para a Amazônia Legal",
-    version="1.0.0"
-)
 
 # Caminho dinâmico para a base relacional
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database", "embarque.db"))
@@ -39,10 +37,34 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "databas
 motor = MotorRoteamentoMultimodal()
 
 
-@app.on_event("startup")
-def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gerencia ciclo de vida da aplicação carregando a base se existente."""
     if os.path.exists(DB_PATH):
         motor.carregar_do_banco(DB_PATH)
+    yield
+
+
+app = FastAPI(
+    title="Embarque Amazônia — REST API",
+    description="API de Roteamento Multimodal e Gestão de Malha de Transportes para a Amazônia Legal",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Configuração de CORS (libera porta padrão do Vite e origens configuradas)
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+if not allowed_origins:
+    allowed_origins = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins if "*" not in allowed_origins else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class LocalidadeResponse(BaseModel):
@@ -77,6 +99,8 @@ class OpcaoRotaResponse(BaseModel):
     numero_conexoes: int
     selo: List[str]
     atualizado_em: str
+    data_atualizacao_iso: str
+    dias_desde_atualizacao: int
     trechos: List[TrechoResponse]
 
 
@@ -93,9 +117,18 @@ class ErroPadraoResponse(BaseModel):
     mensagem: str
 
 
-@app.get("/api/v1/localidades", response_model=List[LocalidadeResponse], tags=["Passageiro - Localidades"])
+@app.get("/api/v1/localidades", response_model=List[LocalidadeResponse], responses={503: {"model": ErroPadraoResponse}}, tags=["Passageiro - Localidades"])
 def listar_localidades(busca: Optional[str] = Query(None, description="Termo para autocompletar nome da localidade")):
-    if not motor.localidades and os.path.exists(DB_PATH):
+    if not os.path.exists(DB_PATH):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "codigo": "BANCO_INDISPONIVEL",
+                "mensagem": "Base de dados relacional indisponível ou não inicializada. Execute python database/init_db.py."
+            }
+        )
+
+    if not motor.localidades:
         motor.carregar_do_banco(DB_PATH)
 
     res = []
@@ -109,20 +142,64 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
     return res
 
 
-@app.get("/api/v1/rotas", response_model=ConsultaRotasResponse, responses={404: {"model": ErroPadraoResponse}}, tags=["Passageiro - Roteamento"])
+@app.get("/api/v1/rotas", response_model=ConsultaRotasResponse, responses={404: {"model": ErroPadraoResponse}, 422: {"model": ErroPadraoResponse}, 503: {"model": ErroPadraoResponse}}, tags=["Passageiro - Roteamento"])
 def buscar_rotas(
     origem: str = Query(..., description="Nome da localidade de origem (ex. Belém)"),
     destino: str = Query(..., description="Nome da localidade de destino (ex. Manaus)"),
-    data: Optional[str] = Query(None, description="Data pretendida da viagem (YYYY-MM-DD)"),
+    data: Optional[str] = Query(None, description="Data pretendida da viagem no formato ISO (YYYY-MM-DD)"),
     criterio: Optional[str] = Query("menor_tempo", description="menor_tempo | menor_custo | mais_confiavel"),
     modais: Optional[str] = Query(None, description="Modais permitidos separados por vírgula (ex: aviao_regional,barco_regional)")
 ):
-    if not motor.localidades and os.path.exists(DB_PATH):
+    if not os.path.exists(DB_PATH):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "codigo": "BANCO_INDISPONIVEL",
+                "mensagem": "Base de dados relacional indisponível ou não inicializada. Execute python database/init_db.py."
+            }
+        )
+
+    if not motor.localidades:
         motor.carregar_do_banco(DB_PATH)
 
-    # Localizar IDs das localidades pelo nome normalizado (insensível a acentuação e caixa)
+    # 1. Validação: Origem e Destino distintos
     origem_norm = normalizar_texto(origem)
     destino_norm = normalizar_texto(destino)
+    if origem_norm == destino_norm:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "codigo": "PARAMETRO_INVALIDO",
+                "mensagem": "Origem e destino não podem ser a mesma localidade."
+            }
+        )
+
+    # 2. Validação: Critério válido
+    criterios_validos = {"menor_tempo", "menor_custo", "mais_confiavel"}
+    crit_escolhido = criterio.strip().lower() if criterio else "menor_tempo"
+    if crit_escolhido not in criterios_validos:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "codigo": "PARAMETRO_INVALIDO",
+                "mensagem": f"Critério '{criterio}' inválido. Valores permitidos: {', '.join(sorted(criterios_validos))}."
+            }
+        )
+
+    # 3. Validação: Formato de data ISO
+    if data:
+        try:
+            datetime.strptime(data.strip(), "%Y-%m-%d")
+        except ValueError:
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={
+                    "codigo": "PARAMETRO_INVALIDO",
+                    "mensagem": f"Formato de data '{data}' inválido. Utilize o padrão ISO YYYY-MM-DD (ex: 2026-11-20)."
+                }
+            )
+
+    # 4. Localizar IDs das localidades
     origem_id = None
     destino_id = None
     for loc_id, loc in motor.localidades.items():
@@ -144,7 +221,7 @@ def buscar_rotas(
     rotas_calculadas = motor.calcular_rotas(
         origem_id=origem_id,
         destino_id=destino_id,
-        criterio=criterio,
+        criterio=crit_escolhido,
         modais_filtro=modais_filtro,
         data_viagem=data
     )
@@ -154,7 +231,7 @@ def buscar_rotas(
         return ConsultaRotasResponse(
             origem=origem,
             destino=destino,
-            criterio_ordenacao=criterio or "menor_tempo",
+            criterio_ordenacao=crit_escolhido,
             total_opcoes=0,
             rotas=[]
         )
@@ -190,13 +267,15 @@ def buscar_rotas(
             numero_conexoes=r.numero_transbordos,
             selo=r.selos,
             atualizado_em=r.texto_recencia,
+            data_atualizacao_iso=r.data_atualizacao_iso,
+            dias_desde_atualizacao=r.dias_max_desatualizacao,
             trechos=trechos_resp
         ))
 
     return ConsultaRotasResponse(
         origem=origem,
         destino=destino,
-        criterio_ordenacao=criterio,
+        criterio_ordenacao=crit_escolhido,
         total_opcoes=len(rotas_resp),
         rotas=rotas_resp
     )

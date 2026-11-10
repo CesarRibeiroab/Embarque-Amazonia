@@ -130,7 +130,7 @@ paths:
         - name: modais
           in: query
           required: false
-          description: Filtro de modais permitidos separados por vírgula
+          description: Filtro de modais permitidos separados por vírgula (10 modais canônicos)
           schema:
             type: string
             example: "barco_regional,aviao_regional"
@@ -150,7 +150,7 @@ paths:
                     criterio_ordenacao: "menor_tempo"
                     total_opcoes: 3
                     rotas:
-                      - id: "rota-1-2-2"
+                      - id: "rota-t2"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
                         modais: ["Avião regional"]
@@ -161,6 +161,8 @@ paths:
                         numero_conexoes: 0
                         selo: ["Menor tempo", "Mais confiável"]
                         atualizado_em: "Atualizado hoje"
+                        data_atualizacao_iso: "2026-11-06"
+                        dias_desde_atualizacao: 0
                         trechos:
                           - id: 2
                             origem_nome: "Belém"
@@ -172,10 +174,10 @@ paths:
                             duracao_minutos: 135
                             tarifa_reais: 780.00
                             data_ultima_atualizacao: "2026-11-06"
-                      - id: "rota-1-2-3"
+                      - id: "rota-t3-t4"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
-                        modais: ["Avião regional", "Barco Regional"]
+                        modais: ["Avião regional", "Barco regional"]
                         preco_total: 750.00
                         duracao_total_minutos: 2880
                         duracao_total_formatada: "2 d"
@@ -183,6 +185,8 @@ paths:
                         numero_conexoes: 1
                         selo: []
                         atualizado_em: "Atualizado há 12 dias"
+                        data_atualizacao_iso: "2026-10-25"
+                        dias_desde_atualizacao: 12
                         trechos:
                           - id: 3
                             origem_nome: "Belém"
@@ -204,10 +208,10 @@ paths:
                             duracao_minutos: 2520
                             tarifa_reais: 210.00
                             data_ultima_atualizacao: "2026-10-25"
-                      - id: "rota-1-2-1"
+                      - id: "rota-t1"
                         origem_nome: "Belém"
                         destino_nome: "Manaus"
-                        modais: ["Barco Regional"]
+                        modais: ["Barco regional"]
                         preco_total: 350.00
                         duracao_total_minutos: 8400
                         duracao_total_formatada: "5 d 20 h"
@@ -215,17 +219,75 @@ paths:
                         numero_conexoes: 0
                         selo: ["Menor custo"]
                         atualizado_em: "Atualizado há 3 dias"
+                        data_atualizacao_iso: "2026-11-03"
+                        dias_desde_atualizacao: 3
                         trechos:
                           - id: 1
                             origem_nome: "Belém"
                             destino_nome: "Manaus"
-                            modal_nome: "Barco Regional"
+                            modal_nome: "Barco regional"
                             operador_nome: "Amazon Star"
                             terminal_origem_nome: "Porto de Belém"
                             terminal_destino_nome: "Porto da Manaus Moderna"
                             duracao_minutos: 8400
                             tarifa_reais: 350.00
                             data_ultima_atualizacao: "2026-11-03"
+                rota_2_manaus_tefe:
+                  summary: Rota 2 Canônica (Manaus -> Tefé) com Voadeira e Barco
+                  value:
+                    origem: "Manaus"
+                    destino: "Tefé"
+                    criterio_ordenacao: "menor_tempo"
+                    total_opcoes: 2
+                    rotas:
+                      - id: "rota-t5"
+                        origem_nome: "Manaus"
+                        destino_nome: "Tefé"
+                        modais: ["Voadeira"]
+                        preco_total: 320.00
+                        duracao_total_minutos: 660
+                        duracao_total_formatada: "11 h"
+                        numero_trechos: 1
+                        numero_conexoes: 0
+                        selo: ["Menor tempo"]
+                        atualizado_em: "Atualizado há 20 dias"
+                        data_atualizacao_iso: "2026-10-17"
+                        dias_desde_atualizacao: 20
+                        trechos:
+                          - id: 5
+                            origem_nome: "Manaus"
+                            destino_nome: "Tefé"
+                            modal_nome: "Voadeira"
+                            operador_nome: "Piloto autônomo (cadastro colaborativo)"
+                            terminal_origem_nome: "Porto de Manaus"
+                            terminal_destino_nome: "Porto Fluvial de Tefé"
+                            duracao_minutos: 660
+                            tarifa_reais: 320.00
+                            data_ultima_atualizacao: "2026-10-17"
+                      - id: "rota-t6"
+                        origem_nome: "Manaus"
+                        destino_nome: "Tefé"
+                        modais: ["Barco regional"]
+                        preco_total: 190.00
+                        duracao_total_minutos: 2160
+                        duracao_total_formatada: "1 d 12 h"
+                        numero_trechos: 1
+                        numero_conexoes: 0
+                        selo: ["Menor custo", "Mais confiável"]
+                        atualizado_em: "Atualizado há 5 dias"
+                        data_atualizacao_iso: "2026-11-01"
+                        dias_desde_atualizacao: 5
+                        trechos:
+                          - id: 6
+                            origem_nome: "Manaus"
+                            destino_nome: "Tefé"
+                            modal_nome: "Barco regional"
+                            operador_nome: "Oliveira Navegações"
+                            terminal_origem_nome: "Porto da Manaus Moderna"
+                            terminal_destino_nome: "Porto Fluvial de Tefé"
+                            duracao_minutos: 2160
+                            tarifa_reais: 190.00
+                            data_ultima_atualizacao: "2026-11-01"
 
         '404':
           description: Origem ou destino não localizados na malha de transportes
@@ -236,6 +298,26 @@ paths:
               example:
                 codigo: "LOCALIDADE_NAO_ENCONTRADA"
                 mensagem: "Origem ou destino não localizados na malha de transporte."
+
+        '422':
+          description: Erro de validação de parâmetros de consulta (ex. origem igual a destino, critério inválido, formato de data inválido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "PARAMETRO_INVALIDO"
+                mensagem: "Origem e destino não podem ser a mesma localidade."
+
+        '503':
+          description: Serviço ou base relacional indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "BANCO_INDISPONIVEL"
+                mensagem: "Base de dados relacional indisponível ou não inicializada."
 
   /rotas/{id}:
     get:
@@ -444,6 +526,13 @@ components:
         atualizado_em:
           type: string
           example: "Atualizado há 3 dias"
+        data_atualizacao_iso:
+          type: string
+          format: date
+          example: "2026-11-03"
+        dias_desde_atualizacao:
+          type: integer
+          example: 3
         trechos:
           type: array
           items:
@@ -540,3 +629,10 @@ components:
         mensagem:
           type: string
           example: "Não foram encontradas opções de itinerário viáveis para o par de localidades informado."
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para autenticação dos operadores no painel de cadastro administrativo (telas A01–A06).

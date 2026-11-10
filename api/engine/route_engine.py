@@ -16,6 +16,7 @@ Capacidades:
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+import os
 import sqlite3
 from typing import List, Dict, Optional, Tuple
 
@@ -56,8 +57,16 @@ class Trecho:
     def dias_desde_atualizacao(self, data_ref: Optional[date] = None) -> int:
         try:
             d_at = datetime.strptime(self.data_ultima_atualizacao, "%Y-%m-%d").date()
-            # Se não fornecida, usa a data canônica 2026-11-06 (ou date.today() se posterior)
-            ref = data_ref or date(2026, 11, 6)
+            ref = data_ref
+            if ref is None:
+                env_ref = os.getenv("DATA_REFERENCIA")
+                if env_ref:
+                    try:
+                        ref = datetime.strptime(env_ref.strip(), "%Y-%m-%d").date()
+                    except Exception:
+                        ref = date(2026, 11, 6)
+                else:
+                    ref = date(2026, 11, 6)
             return max(0, (ref - d_at).days)
         except Exception:
             return 0
@@ -73,6 +82,7 @@ class OpcaoRota:
     custo_total_reais: float
     numero_transbordos: int
     dias_max_desatualizacao: int
+    data_atualizacao_iso: str = ""
     selos: List[str] = field(default_factory=list)
 
     @property
@@ -130,10 +140,12 @@ class MotorRoteamentoMultimodal:
 
     def carregar_do_banco(self, db_path: str):
         """
-        Carrega localidades e trechos diretamente do banco SQLite.
-        Utiliza subconsulta para pegar o horário principal e evitar duplicação de arestas
-        caso um trecho possua múltiplos horários em horario_operacao.
+        Carrega localidades e trechos diretamente do banco SQLite de forma idempotente.
+        Limpa estruturas em memória antes de recarregar.
         """
+        self.localidades.clear()
+        self.adjacencia.clear()
+
         con = sqlite3.connect(db_path)
         cur = con.cursor()
 
@@ -206,6 +218,10 @@ class MotorRoteamentoMultimodal:
         if origem_id not in self.localidades or destino_id not in self.localidades:
             return []
 
+        # Rejeita busca onde a origem é igual ao destino
+        if origem_id == destino_id:
+            return []
+
         modais_permitidos = set(m.strip().lower() for m in modais_filtro if m.strip()) if modais_filtro else None
 
         # Processar máscara do dia da semana a partir de data_viagem (YYYY-MM-DD)
@@ -257,8 +273,11 @@ class MotorRoteamentoMultimodal:
                 continue
 
             num_transbordos = max(0, len(seq_trechos) - 1)
+            trecho_ids_str = "-".join(f"t{t.id}" for t in seq_trechos)
+            data_mais_antiga = min((t.data_ultima_atualizacao for t in seq_trechos), default="")
+
             opc = OpcaoRota(
-                id=f"rota-{origem_id}-{destino_id}-{idx+1}",
+                id=f"rota-{trecho_ids_str}",
                 origem_nome=self.localidades[origem_id].nome,
                 destino_nome=self.localidades[destino_id].nome,
                 trechos=seq_trechos,
@@ -266,6 +285,7 @@ class MotorRoteamentoMultimodal:
                 custo_total_reais=round(custo_total, 2),
                 numero_transbordos=num_transbordos,
                 dias_max_desatualizacao=pior_recencia,
+                data_atualizacao_iso=data_mais_antiga,
                 selos=[]
             )
             opcoes.append(opc)
