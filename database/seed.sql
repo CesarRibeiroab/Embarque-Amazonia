@@ -83,20 +83,43 @@ INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_de
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
 (8, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 200.00, -1, '2026-10-25', 'Horário incompatível para conexão.');
 
--- 6. HORÁRIOS
-INSERT INTO horario_operacao (trecho_id, hora_partida, hora_chegada_estimada, frequencia_descricao) VALUES
-(1, '18:00:00', '10:00:00', 'Quartas e Sextas-feiras'),
-(2, '09:30:00', '11:45:00', 'Diário'),
-(3, '08:00:00', '09:20:00', 'Diário'),
-(4, '14:00:00', '08:00:00', 'Terças e Quintas'),
-(5, '06:00:00', '17:00:00', 'Segundas e Quintas'),
-(6, '17:00:00', '05:00:00', 'Sextas-feiras'),
-(7, '12:00:00', '06:00:00', 'Semanal'),
-(8, '07:00:00', '01:00:00', 'Partida matinal incompatível');
+-- TRECHOS DE RETORNO (Fluxo Inverso para testes de ida e volta)
+-- Manaus -> Belém (Barco Regional Amazon Star, 8400 min, R$ 350,00)
+INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
+(9, 2, 1, 'Porto da Manaus Moderna', 'Porto de Belém', 1, 1, 8400, 350.00, 0, '2026-11-03', 'Subida/descida do rio com escala em Santarém.');
+
+-- Manaus -> Belém (Avião regional Azul, 135 min, R$ 780,00)
+INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
+(10, 2, 1, 'Aeroporto Eduardo Gomes', 'Aeroporto Internacional de Belém', 2, 8, 135, 780.00, 0, '2026-11-06', 'Voo de retorno direto regular.');
+
+-- Tefé -> Manaus (Voadeira expressa piloto autônomo, 660 min, R$ 320,00)
+INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
+(11, 4, 2, 'Porto Fluvial de Tefé', 'Porto de Manaus', 3, 2, 660, 320.00, 0, '2026-10-17', 'Retorno Tefé-Manaus expressa.');
+
+-- Tefé -> Manaus (Barco regional Oliveira Navegações, 2160 min, R$ 190,00)
+INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
+(12, 4, 2, 'Porto Fluvial de Tefé', 'Porto da Manaus Moderna', 4, 1, 2160, 190.00, 0, '2026-11-01', 'Retorno Tefé-Manaus de linha.');
+
+-- 6. HORÁRIOS (com bitmask: Seg=1, Ter=2, Qua=4, Qui=8, Sex=16, Sab=32, Dom=64)
+INSERT INTO horario_operacao (trecho_id, hora_partida, hora_chegada_estimada, dias_semana_mask, frequencia_descricao) VALUES
+(1, '18:00:00', '14:00:00', 20, 'Quartas e Sextas-feiras'),
+(2, '09:30:00', '11:45:00', 127, 'Diário'),
+(3, '08:00:00', '09:20:00', 127, 'Diário'),
+(4, '14:00:00', '08:00:00', 26, 'Terças, Quintas e Sextas-feiras'),
+(5, '06:00:00', '17:00:00', 25, 'Segundas, Quintas e Sextas-feiras'),
+(6, '17:00:00', '05:00:00', 16, 'Sextas-feiras'),
+(7, '12:00:00', '06:00:00', 32, 'Semanal (Sábados)'),
+(8, '07:00:00', '01:00:00', 127, 'Partida matinal incompatível'),
+(9, '18:00:00', '14:00:00', 20, 'Quartas e Sextas-feiras'),
+(10, '14:00:00', '16:15:00', 127, 'Diário'),
+(11, '06:00:00', '17:00:00', 25, 'Segundas, Quintas e Sextas-feiras'),
+(12, '17:00:00', '05:00:00', 16, 'Sextas-feiras');
 
 -- 7. ACOMODAÇÕES
 INSERT INTO acomodacao_trecho (trecho_id, tipo, valor_total_reais, descricao) VALUES
 (1, 'rede', 350.00, 'Acomodação tradicional em rede'),
 (1, 'camarote_duplo', 1400.00, 'Camarote privativo climatizado'),
 (4, 'rede', 210.00, 'Acomodação em rede'),
-(6, 'rede', 190.00, 'Passagem em rede');
+(6, 'rede', 190.00, 'Passagem em rede'),
+(9, 'rede', 350.00, 'Acomodação em rede'),
+(12, 'rede', 190.00, 'Acomodação em rede');

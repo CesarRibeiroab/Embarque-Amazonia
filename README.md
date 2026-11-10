@@ -57,22 +57,25 @@ Para criar e popular o banco relacional SQLite local a partir do `schema.sql` e 
 ```bash
 python database/init_db.py
 ```
-*Saída esperada:* `BANCO DE DADOS EXECUTADO COM SUCESSO! (7 localidades, 10 modais, 8 trechos)`.
+*Saída esperada:* `BANCO DE DADOS EXECUTADO COM SUCESSO! (7 localidades, 10 modais, 12 trechos)`.
+
+> [!NOTE]
+> O ambiente local utiliza SQLite para simplificar execução e testes do protótipo. A migração para PostgreSQL está prevista para o ambiente de homologação, com DDL documentado no cabeçalho de `database/schema.sql`.
 
 ### 2. Executar a Suíte de Testes Automatizados
-O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP (12 testes ao todo):
+O projeto conta com testes unitários cobrindo o motor de grafo e testes de integração dos endpoints HTTP (**14 testes ao todo**):
 
 * **Testes do Motor de Rotas (8 testes):**
 ```bash
 python api/tests/test_route_engine.py
 ```
-*Saída esperada:* `Ran 8 tests in 0.010s - OK`
+*Saída esperada:* `Ran 8 tests in 0.020s - OK`
 
-* **Testes de Integração da API REST (4 testes):**
+* **Testes de Integração da API REST (6 testes):**
 ```bash
 python api/tests/test_api.py
 ```
-*Saída esperada:* `Ran 4 tests in 0.404s - OK`
+*Saída esperada:* `Ran 6 tests in 0.420s - OK` (cobre localidades, busca multicritério, filtro de modais, ausência de rotas viáveis, erro 404 para localidade desconhecida e normalização de acentos/retorno).
 
 ### 3. Executar o Servidor FastAPI
 Para subir o servidor da API com recarregamento dinâmico:
@@ -84,6 +87,9 @@ Com o servidor ativo:
 * **Documentação Swagger UI Interativa:** `http://localhost:8000/docs`
 * **Busca de Rotas (Exemplo Belém → Manaus):** `http://localhost:8000/api/v1/rotas?origem=Belém&destino=Manaus&criterio=menor_custo`
 * **Catálogo de Localidades:** `http://localhost:8000/api/v1/localidades`
+
+> [!NOTE]
+> O FastAPI implementa atualmente os endpoints essenciais do passageiro (`/api/v1/localidades`, `/api/v1/rotas` com suporte a filtros de `modais`, ordenação por `criterio` e normalização fonética/acentuação). O CRUD da área administrativa de cadastro (telas A01–A06) está planejado para o marco da Semana 2.
 
 ### 4. Executar o Mock Server da API (Prism CLI)
 Caso deseje testar a simulação estática do contrato OpenAPI 3.1:

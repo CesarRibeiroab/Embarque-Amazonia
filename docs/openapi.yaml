@@ -228,11 +228,14 @@ paths:
                             data_ultima_atualizacao: "2026-11-03"
 
         '404':
-          description: Nenhuma rota viável encontrada entre a origem e o destino (caso Cametá-Alenquer)
+          description: Origem ou destino não localizados na malha de transportes
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "LOCALIDADE_NAO_ENCONTRADA"
+                mensagem: "Origem ou destino não localizados na malha de transporte."
 
   /rotas/{id}:
     get:

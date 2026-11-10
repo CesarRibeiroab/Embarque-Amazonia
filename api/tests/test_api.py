@@ -59,14 +59,31 @@ class TesteFastAPIEndpoints(unittest.TestCase):
         self.assertEqual(data["total_opcoes"], 1)
         self.assertEqual(data["rotas"][0]["modais"], ["Avião regional"])
 
-    def test_04_buscar_rotas_caso_sem_resultados_erro_padrao(self):
+    def test_04_buscar_rotas_sem_resultados_tela_p10a(self):
+        # Origem e destino existem na malha, mas não há conexão direta ou indireta viável
         response = self.client.get("/api/v1/rotas?origem=Cametá&destino=Alenquer")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["origem"], "Cametá")
+        self.assertEqual(data["destino"], "Alenquer")
+        self.assertEqual(data["total_opcoes"], 0)
+        self.assertEqual(data["rotas"], [])
+
+    def test_05_localidade_inexistente_erro_padrao_404(self):
+        # Localidade inexistente na base relacional
+        response = self.client.get("/api/v1/rotas?origem=CidadeInexistente&destino=Manaus")
         self.assertEqual(response.status_code, 404)
         data = response.json()
-        # Validação do formato ErroPadrao {"codigo": "...", "mensagem": "..."}
         self.assertIn("codigo", data)
         self.assertIn("mensagem", data)
-        self.assertEqual(data["codigo"], "ROTA_NAO_ENCONTRADA")
+        self.assertEqual(data["codigo"], "LOCALIDADE_NAO_ENCONTRADA")
+
+    def test_06_busca_insensivel_a_acentuacao_e_rota_retorno(self):
+        # Testa consulta sem acento ('Belem' em vez de 'Belém') e sentido inverso (Manaus -> Belém)
+        response = self.client.get("/api/v1/rotas?origem=manaus&destino=belem")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertGreaterEqual(data["total_opcoes"], 2)  # Retorno via avião e barco regional
 
 
 if __name__ == "__main__":

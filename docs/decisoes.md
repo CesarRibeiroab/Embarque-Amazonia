@@ -75,12 +75,13 @@ A especificação OpenAPI 3.1 no docs/openapi.yaml documenta a busca com os trê
 
 [1:45 - 2:30] DEMONSTRAÇÃO DO MOTOR E DA API FASTAPI (AO VIVO)
 [Executar: python api/tests/test_route_engine.py && python api/tests/test_api.py]
-"Temos 12 testes automatizados passando 100%:
+"Temos 14 testes automatizados passando 100%:
 - Na Rota 1 (Belém–Manaus), calcula as 3 opções (barco, avião e combinada via Santarém),
   calculando dinamicamente a conexão de 4h 40min e atribuindo os selos corretos.
 - Na Rota 2 (Manaus–Tefé), compara voadeira e barco regional.
-- Na Rota 3 (Cametá–Alenquer), devolve erro padrão 404 para pares sem malha viável.
-- Rejeita conexões com horários impossíveis, filtra por modais e sinaliza dados desatualizados.
+- Na Rota 3 (Cametá–Alenquer), devolve 200 OK com lista vazia para pares sem malha viável (tela P10a).
+- Rejeita conexões com horários impossíveis, filtra por modais e por dias da semana da viagem,
+  suporta rotas de retorno (ida e volta), aceita buscas sem acentuação e sinaliza dados desatualizados.
 Ao subir o FastAPI com uvicorn api.main:app, podemos ver a busca funcionando no Swagger UI."
 
 [2:30 - 3:00] ALINHAMENTO DAS DIRETRIZES DA ENTREGA FINAL

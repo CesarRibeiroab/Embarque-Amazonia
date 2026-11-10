@@ -8,6 +8,7 @@ além de padronizar respostas de erro de acordo com ErroPadrao do openapi.yaml.
 
 import os
 import sys
+import unicodedata
 from typing import List, Optional
 from fastapi import FastAPI, Request, status, Query
 from fastapi.responses import JSONResponse
@@ -17,6 +18,13 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.dirname(__file__))
 
 from engine.route_engine import MotorRoteamentoMultimodal
+
+
+def normalizar_texto(texto: Optional[str]) -> str:
+    """Normaliza texto removendo acentos e convertendo para minúsculas."""
+    if not texto:
+        return ""
+    return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').strip().lower()
 
 app = FastAPI(
     title="Embarque Amazônia — REST API",
@@ -91,9 +99,10 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
         motor.carregar_do_banco(DB_PATH)
 
     res = []
+    termo_busca = normalizar_texto(busca) if busca else None
     for loc in motor.localidades.values():
-        if busca:
-            if busca.lower() in loc.nome.lower():
+        if termo_busca:
+            if termo_busca in normalizar_texto(loc.nome):
                 res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
         else:
             res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
@@ -111,13 +120,16 @@ def buscar_rotas(
     if not motor.localidades and os.path.exists(DB_PATH):
         motor.carregar_do_banco(DB_PATH)
 
-    # Localizar IDs das localidades pelo nome
+    # Localizar IDs das localidades pelo nome normalizado (insensível a acentuação e caixa)
+    origem_norm = normalizar_texto(origem)
+    destino_norm = normalizar_texto(destino)
     origem_id = None
     destino_id = None
     for loc_id, loc in motor.localidades.items():
-        if loc.nome.lower() == origem.strip().lower():
+        loc_norm = normalizar_texto(loc.nome)
+        if loc_norm == origem_norm:
             origem_id = loc_id
-        if loc.nome.lower() == destino.strip().lower():
+        if loc_norm == destino_norm:
             destino_id = loc_id
 
     if not origem_id or not destino_id:
@@ -133,13 +145,18 @@ def buscar_rotas(
         origem_id=origem_id,
         destino_id=destino_id,
         criterio=criterio,
-        modais_filtro=modais_filtro
+        modais_filtro=modais_filtro,
+        data_viagem=data
     )
 
+    # Se não houver rotas viáveis, retorna 200 OK com lista vazia (conforme tela P10a 'sem resultados')
     if not rotas_calculadas:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"codigo": "ROTA_NAO_ENCONTRADA", "mensagem": "Não foram encontradas opções de itinerário viáveis para o par de localidades informado com os filtros aplicados."}
+        return ConsultaRotasResponse(
+            origem=origem,
+            destino=destino,
+            criterio_ordenacao=criterio or "menor_tempo",
+            total_opcoes=0,
+            rotas=[]
         )
 
     # Mapear para a estrutura do contrato OpenAPI
