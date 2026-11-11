@@ -66,6 +66,7 @@ Thumbs.db
 
 # Backups and legacy zips
 *.zip
+_arquivo/
 Entrega_Parcial/
 Materia/
 PI2_*.md
