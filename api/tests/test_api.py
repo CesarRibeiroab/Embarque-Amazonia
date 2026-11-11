@@ -6,11 +6,13 @@ Valida GET /api/v1/localidades, GET /api/v1/rotas, filtros de modais e formato d
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 # Adicionar pasta api ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from fastapi.testclient import TestClient
+import main
 from main import app, DB_PATH, motor
 
 
@@ -122,6 +124,55 @@ class TesteFastAPIEndpoints(unittest.TestCase):
         self.assertTrue(primeira["id"].startswith("rota-t"))
         self.assertIn("data_atualizacao_iso", primeira)
         self.assertIn("dias_desde_atualizacao", primeira)
+
+    def test_12_parametro_ausente_422_erro_padrao_e_docs_ativos(self):
+        for url in [
+            "/api/v1/rotas?origem=Belém",
+            "/api/v1/rotas?destino=Manaus",
+            "/api/v1/rotas?origem=&destino=Manaus",
+        ]:
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, 422, f"Esperado 422 para {url}")
+            data = resp.json()
+            self.assertEqual(data["codigo"], "PARAMETRO_INVALIDO")
+            self.assertIn("mensagem", data)
+
+        self.assertEqual(self.client.get("/docs").status_code, 200)
+        self.assertEqual(self.client.get("/openapi.json").status_code, 200)
+
+    def test_13_autocomplete_localidades_busca_sem_acento(self):
+        resp = self.client.get("/api/v1/localidades?busca=bele")
+        self.assertEqual(resp.status_code, 200)
+        nomes = [loc["nome"] for loc in resp.json()]
+        self.assertIn("Belém", nomes)
+        self.assertEqual(len(nomes), 1)
+
+    def test_14_opcao_unica_sem_selos_comparativos(self):
+        # Parintins -> Manaus (1 opção, > 30 dias): apenas selo Desatualizado
+        resp_p = self.client.get("/api/v1/rotas?origem=Parintins&destino=Manaus")
+        self.assertEqual(resp_p.status_code, 200)
+        dp = resp_p.json()
+        self.assertEqual(dp["total_opcoes"], 1)
+        self.assertEqual(dp["rotas"][0]["selo"], ["Desatualizado"])
+
+        # Santarém -> Manaus (1 opção, sem trecho 8): nenhum selo comparativo
+        resp_s = self.client.get("/api/v1/rotas?origem=Santarém&destino=Manaus")
+        self.assertEqual(resp_s.status_code, 200)
+        ds = resp_s.json()
+        self.assertEqual(ds["total_opcoes"], 1)
+        self.assertEqual(ds["rotas"][0]["id"], "rota-t4")
+        self.assertEqual(ds["rotas"][0]["selo"], [])
+
+    def test_15_banco_ausente_retorna_503_nos_dois_endpoints(self):
+        caminho_falso = os.path.join(os.path.dirname(DB_PATH), "nao_existe_embarque.db")
+        with patch.object(main, "DB_PATH", caminho_falso):
+            r_loc = self.client.get("/api/v1/localidades")
+            self.assertEqual(r_loc.status_code, 503)
+            self.assertEqual(r_loc.json()["codigo"], "BANCO_INDISPONIVEL")
+
+            r_rotas = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus")
+            self.assertEqual(r_rotas.status_code, 503)
+            self.assertEqual(r_rotas.json()["codigo"], "BANCO_INDISPONIVEL")
 
 
 if __name__ == "__main__":

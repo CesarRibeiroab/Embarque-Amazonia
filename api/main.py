@@ -13,6 +13,8 @@ import sys
 import unicodedata
 from typing import List, Optional
 from fastapi import FastAPI, Request, status, Query
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -117,6 +119,27 @@ class ErroPadraoResponse(BaseModel):
     mensagem: str
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Padroniza erros 422 de parâmetros ausentes ou malformados nas rotas /api/v1/*."""
+    if not request.url.path.startswith("/api/v1/"):
+        return await request_validation_exception_handler(request, exc)
+
+    erros = []
+    for err in exc.errors():
+        loc = ".".join(str(x) for x in err.get("loc", []) if x != "query")
+        msg = err.get("msg", "Parâmetro inválido")
+        erros.append(f"{loc}: {msg}" if loc else msg)
+    detalhe = "; ".join(erros) if erros else "Parâmetros obrigatórios ausentes ou inválidos."
+    return JSONResponse(
+        status_code=422,
+        content={
+            "codigo": "PARAMETRO_INVALIDO",
+            "mensagem": f"Parâmetro inválido ou ausente: {detalhe}"
+        }
+    )
+
+
 @app.get("/api/v1/localidades", response_model=List[LocalidadeResponse], responses={503: {"model": ErroPadraoResponse}}, tags=["Passageiro - Localidades"])
 def listar_localidades(busca: Optional[str] = Query(None, description="Termo para autocompletar nome da localidade")):
     if not os.path.exists(DB_PATH):
@@ -144,8 +167,8 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
 
 @app.get("/api/v1/rotas", response_model=ConsultaRotasResponse, responses={404: {"model": ErroPadraoResponse}, 422: {"model": ErroPadraoResponse}, 503: {"model": ErroPadraoResponse}}, tags=["Passageiro - Roteamento"])
 def buscar_rotas(
-    origem: str = Query(..., description="Nome da localidade de origem (ex. Belém)"),
-    destino: str = Query(..., description="Nome da localidade de destino (ex. Manaus)"),
+    origem: str = Query(..., min_length=1, description="Nome da localidade de origem (ex. Belém)"),
+    destino: str = Query(..., min_length=1, description="Nome da localidade de destino (ex. Manaus)"),
     data: Optional[str] = Query(None, description="Data pretendida da viagem no formato ISO (YYYY-MM-DD)"),
     criterio: Optional[str] = Query("menor_tempo", description="menor_tempo | menor_custo | mais_confiavel"),
     modais: Optional[str] = Query(None, description="Modais permitidos separados por vírgula (ex: aviao_regional,barco_regional)")
@@ -162,12 +185,20 @@ def buscar_rotas(
     if not motor.localidades:
         motor.carregar_do_banco(DB_PATH)
 
-    # 1. Validação: Origem e Destino distintos
+    # 1. Validação: Origem e Destino preenchidos e distintos
     origem_norm = normalizar_texto(origem)
     destino_norm = normalizar_texto(destino)
+    if not origem_norm or not destino_norm:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "codigo": "PARAMETRO_INVALIDO",
+                "mensagem": "Origem e destino são obrigatórios."
+            }
+        )
     if origem_norm == destino_norm:
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             content={
                 "codigo": "PARAMETRO_INVALIDO",
                 "mensagem": "Origem e destino não podem ser a mesma localidade."
@@ -179,7 +210,7 @@ def buscar_rotas(
     crit_escolhido = criterio.strip().lower() if criterio else "menor_tempo"
     if crit_escolhido not in criterios_validos:
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             content={
                 "codigo": "PARAMETRO_INVALIDO",
                 "mensagem": f"Critério '{criterio}' inválido. Valores permitidos: {', '.join(sorted(criterios_validos))}."
@@ -192,7 +223,7 @@ def buscar_rotas(
             datetime.strptime(data.strip(), "%Y-%m-%d")
         except ValueError:
             return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=422,
                 content={
                     "codigo": "PARAMETRO_INVALIDO",
                     "mensagem": f"Formato de data '{data}' inválido. Utilize o padrão ISO YYYY-MM-DD (ex: 2026-11-20)."
@@ -216,7 +247,8 @@ def buscar_rotas(
         )
 
     # Processar filtro de modais se fornecido
-    modais_filtro = [m.strip().lower() for m in modais.split(",")] if modais else None
+    modais_lista = [m.strip().lower() for m in modais.split(",") if m.strip()] if modais else []
+    modais_filtro = modais_lista or None
 
     rotas_calculadas = motor.calcular_rotas(
         origem_id=origem_id,

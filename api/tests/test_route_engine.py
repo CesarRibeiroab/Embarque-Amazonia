@@ -142,6 +142,67 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
         self.assertNotIn("rota-t3-t88", ids, "Conexão voo (chega 09:20) + barco (parte 07:00) deve ser descartada")
         self.assertIn("rota-t3-t4", ids, "A conexão válida (chega 09:20 -> parte 14:00) deve permanecer")
 
+    def test_15_opcao_unica_sem_selos_comparativos(self):
+        # Parintins (5) -> Manaus (2): opção única e > 30 dias deve ter apenas 'Desatualizado'
+        rotas_parintins = self.motor.calcular_rotas(origem_id=5, destino_id=2)
+        self.assertEqual(len(rotas_parintins), 1)
+        self.assertEqual(rotas_parintins[0].selos, ["Desatualizado"])
+
+        # Santarém (3) -> Manaus (2): opção única atualizada (< 30 dias) não recebe selos comparativos
+        rotas_santarem = self.motor.calcular_rotas(origem_id=3, destino_id=2)
+        self.assertEqual(len(rotas_santarem), 1)
+        self.assertEqual(rotas_santarem[0].id, "rota-t4")
+        self.assertEqual(rotas_santarem[0].selos, [])
+
+    def test_16_data_referencia_sistema_e_sobrescrita(self):
+        from datetime import date, timedelta
+        hoje = date.today()
+        tr_hoje = Trecho(
+            id=901, origem_id=1, destino_id=2, operador_nome="Op", modal_codigo="barco_regional",
+            modal_nome="Barco regional", duracao_minutos=100, tarifa_reais=50.0,
+            data_ultima_atualizacao=hoje.strftime("%Y-%m-%d")
+        )
+        tr_10d = Trecho(
+            id=902, origem_id=1, destino_id=2, operador_nome="Op", modal_codigo="barco_regional",
+            modal_nome="Barco regional", duracao_minutos=100, tarifa_reais=50.0,
+            data_ultima_atualizacao=(hoje - timedelta(days=10)).strftime("%Y-%m-%d")
+        )
+        antigo = os.environ.pop("DATA_REFERENCIA", None)
+        try:
+            self.assertEqual(tr_hoje.dias_desde_atualizacao(), 0)
+            self.assertEqual(tr_10d.dias_desde_atualizacao(), 10)
+            os.environ["DATA_REFERENCIA"] = (hoje + timedelta(days=5)).strftime("%Y-%m-%d")
+            self.assertEqual(tr_hoje.dias_desde_atualizacao(), 5)
+            self.assertEqual(tr_10d.dias_desde_atualizacao(), 15)
+        finally:
+            if antigo is None:
+                os.environ.pop("DATA_REFERENCIA", None)
+            else:
+                os.environ["DATA_REFERENCIA"] = antigo
+
+    def test_17_limite_cinco_opcoes_apos_ordenacao(self):
+        from datetime import date
+        motor_lim = MotorRoteamentoMultimodal()
+        motor_lim.adicionar_localidade(Localidade(1, "A", "PA", True))
+        motor_lim.adicionar_localidade(Localidade(2, "B", "AM", True))
+        hoje_str = date.today().strftime("%Y-%m-%d")
+        # Cria 6 opções diretas com tarifas crescentes e durações decrescentes
+        for idx in range(6):
+            motor_lim.adicionar_trecho(Trecho(
+                id=100 + idx, origem_id=1, destino_id=2, operador_nome=f"Op {idx}",
+                modal_codigo="barco_regional", modal_nome="Barco regional",
+                duracao_minutos=600 - idx * 50,
+                tarifa_reais=100.0 + idx * 50.0,
+                data_ultima_atualizacao=hoje_str
+            ))
+        por_custo = motor_lim.calcular_rotas(1, 2, criterio="menor_custo")
+        self.assertEqual(len(por_custo), 5)
+        self.assertEqual([r.custo_total_reais for r in por_custo], [100.0, 150.0, 200.0, 250.0, 300.0])
+
+        por_tempo = motor_lim.calcular_rotas(1, 2, criterio="menor_tempo")
+        self.assertEqual(len(por_tempo), 5)
+        self.assertEqual([r.duracao_total_minutos for r in por_tempo], [350, 400, 450, 500, 550])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

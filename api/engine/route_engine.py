@@ -60,13 +60,13 @@ class Trecho:
             ref = data_ref
             if ref is None:
                 env_ref = os.getenv("DATA_REFERENCIA")
-                if env_ref:
+                if env_ref and env_ref.strip():
                     try:
                         ref = datetime.strptime(env_ref.strip(), "%Y-%m-%d").date()
                     except Exception:
-                        ref = date(2026, 11, 6)
+                        ref = date.today()
                 else:
-                    ref = date(2026, 11, 6)
+                    ref = date.today()
             return max(0, (ref - d_at).days)
         except Exception:
             return 0
@@ -103,6 +103,8 @@ class OpcaoRota:
     def texto_recencia(self) -> str:
         if self.dias_max_desatualizacao == 0:
             return "Atualizado hoje"
+        if self.dias_max_desatualizacao == 1:
+            return "Atualizado há 1 dia"
         return f"Atualizado há {self.dias_max_desatualizacao} dias"
 
 
@@ -213,7 +215,8 @@ class MotorRoteamentoMultimodal:
         criterio: str = "menor_tempo",
         modais_filtro: Optional[List[str]] = None,
         data_viagem: Optional[str] = None,
-        data_referencia: Optional[date] = None
+        data_referencia: Optional[date] = None,
+        max_opcoes: int = 5
     ) -> List[OpcaoRota]:
         if origem_id not in self.localidades or destino_id not in self.localidades:
             return []
@@ -293,18 +296,22 @@ class MotorRoteamentoMultimodal:
         if not opcoes:
             return []
 
-        # Determinar os melhores valores para atribuição dos selos
-        min_tempo = min(o.duracao_total_minutos for o in opcoes)
-        min_custo = min(o.custo_total_reais for o in opcoes)
-        mais_recente = min(o.dias_max_desatualizacao for o in opcoes)
+        # Atribuir selos comparativos apenas quando há 2 ou mais opções
+        if len(opcoes) >= 2:
+            min_tempo = min(o.duracao_total_minutos for o in opcoes)
+            min_custo = min(o.custo_total_reais for o in opcoes)
+            mais_recente = min(o.dias_max_desatualizacao for o in opcoes)
 
+            for o in opcoes:
+                if o.duracao_total_minutos == min_tempo:
+                    o.selos.append("Menor tempo")
+                if o.custo_total_reais == min_custo:
+                    o.selos.append("Menor custo")
+                if o.dias_max_desatualizacao == mais_recente:
+                    o.selos.append("Mais confiável")
+
+        # Selo 'Desatualizado' aplica-se sempre que passar de 30 dias, inclusive opção única
         for o in opcoes:
-            if o.duracao_total_minutos == min_tempo:
-                o.selos.append("Menor tempo")
-            if o.custo_total_reais == min_custo:
-                o.selos.append("Menor custo")
-            if o.dias_max_desatualizacao == mais_recente:
-                o.selos.append("Mais confiável")
             if o.dias_max_desatualizacao > 30:
                 o.selos.append("Desatualizado")
 
@@ -313,7 +320,10 @@ class MotorRoteamentoMultimodal:
             opcoes.sort(key=lambda x: (x.custo_total_reais, x.duracao_total_minutos))
         elif criterio == "mais_confiavel":
             opcoes.sort(key=lambda x: (x.dias_max_desatualizacao, x.duracao_total_minutos))
-        else: # menor_tempo
+        else:  # menor_tempo
             opcoes.sort(key=lambda x: (x.duracao_total_minutos, x.custo_total_reais))
+
+        if max_opcoes and max_opcoes > 0:
+            opcoes = opcoes[:max_opcoes]
 
         return opcoes
