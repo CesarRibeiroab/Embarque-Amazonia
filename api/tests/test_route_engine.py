@@ -116,6 +116,32 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
         self.assertIn("rota-t1", ids, "Barco direto deve ter id 'rota-t1'")
         self.assertIn("rota-t3-t4", ids, "Combinada deve ter id 'rota-t3-t4'")
 
+    def test_14_conexao_impossivel_descartada_fim_a_fim(self):
+        # Motor novo carregado do banco + trecho em memória Santarém (3) -> Manaus (2) partindo às 07:00
+        from datetime import date
+        motor_teste = MotorRoteamentoMultimodal()
+        motor_teste.carregar_do_banco(self.db_path)
+        trecho_incompativel = Trecho(
+            id=88,
+            origem_id=3,
+            destino_id=2,
+            operador_nome="Barco Teste Conexão",
+            modal_codigo="barco_regional",
+            modal_nome="Barco regional",
+            duracao_minutos=2520,
+            tarifa_reais=200.0,
+            data_ultima_atualizacao=date.today().strftime("%Y-%m-%d"),
+            hora_partida="07:00:00",
+            hora_chegada="01:00:00",
+            dias_semana_mask=127,
+        )
+        motor_teste.adicionar_trecho(trecho_incompativel)
+
+        rotas = motor_teste.calcular_rotas(origem_id=1, destino_id=2, criterio="menor_custo")
+        ids = [r.id for r in rotas]
+        self.assertNotIn("rota-t3-t88", ids, "Conexão voo (chega 09:20) + barco (parte 07:00) deve ser descartada")
+        self.assertIn("rota-t3-t4", ids, "A conexão válida (chega 09:20 -> parte 14:00) deve permanecer")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

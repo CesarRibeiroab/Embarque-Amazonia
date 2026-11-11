@@ -44,62 +44,59 @@ INSERT INTO operador_modal (operador_id, modal_id, numero_registro, orgao_emisso
 (4, 1, 'ANTAQ-REG-13045', 'ANTAQ');
 
 -- 5. TRECHOS DAS ROTAS CANÔNICAS (Card 1)
--- Data de referência padrão: 20/11/2026 (Sexta-feira)
+-- Data da viagem de teste canônica: 20/11/2026 (Sexta-feira)
+-- Datas de atualização (data_ultima_atualizacao) relativas ao momento da execução do init_db.py
 -- Nota sobre limitações operacionais: Fuso horário (Belém UTC-3 / Manaus UTC-4) e conexões consideradas no mesmo dia.
 
 -- ROTA 1: Belém -> Manaus
--- Opção A: Barco regional Amazon Star (5d 20h = 8400 min, R$ 350,00, atualizado há 3 dias: 2026-11-03)
+-- Opção A: Barco regional Amazon Star (5d 20h = 8400 min, R$ 350,00, atualizado há 3 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(1, 1, 2, 'Porto de Belém', 'Porto da Manaus Moderna', 1, 1, 8400, 350.00, 0, 'ida', '2026-11-03', 'Escala em Santarém. Sujeito ao regime de águas.');
+(1, 1, 2, 'Porto de Belém', 'Porto da Manaus Moderna', 1, 1, 8400, 350.00, 0, 'ida', date('now', 'localtime', '-3 days'), 'Escala em Santarém. Sujeito ao regime de águas.');
 
--- Opção B: Avião regional Azul (2h 15min = 135 min, R$ 780,00, atualizado hoje: 2026-11-06)
+-- Opção B: Avião regional Azul (2h 15min = 135 min, R$ 780,00, atualizado hoje)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(2, 1, 2, 'Aeroporto Internacional de Belém', 'Aeroporto Eduardo Gomes', 2, 8, 135, 780.00, 0, 'ida', '2026-11-06', 'Voo direto regular.');
+(2, 1, 2, 'Aeroporto Internacional de Belém', 'Aeroporto Eduardo Gomes', 2, 8, 135, 780.00, 0, 'ida', date('now', 'localtime'), 'Voo direto regular.');
 
 -- Opção C (Combinada): 
 -- Trecho 1: Avião Belém -> Santarém (1h 20min = 80 min, saída 08:00, chegada 09:20, R$ 540,00)
 -- Conexão em Santarém calculada pelos horários: Saída 14:00 - Chegada 09:20 = 4h 40min = 280 min
 -- Trecho 2: Barco Santarém -> Manaus (1d 18h = 2520 min, saída 14:00, R$ 210,00)
--- Total C: 80m + 280m + 2520m = 2880 min = 48h = 2 dias | Custo = R$ 750,00 | Atualizado há 12 dias (2026-10-25)
+-- Total C: 80m + 280m + 2520m = 2880 min = 48h = 2 dias | Custo = R$ 750,00 | Atualizado há 12 dias
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(3, 1, 3, 'Aeroporto de Belém', 'Aeroporto de Santarém', 2, 8, 80, 540.00, 280, 'ida', '2026-10-25', 'Voo regional.');
+(3, 1, 3, 'Aeroporto de Belém', 'Aeroporto de Santarém', 2, 8, 80, 540.00, 280, 'ida', date('now', 'localtime', '-12 days'), 'Voo regional.');
 
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(4, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 210.00, 0, 'ida', '2026-10-25', 'Barco de linha.');
+(4, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 210.00, 0, 'ida', date('now', 'localtime', '-12 days'), 'Barco de linha.');
 
 -- ROTA 2: Manaus -> Tefé
--- Opção A: Voadeira expressa piloto autônomo (11h = 660 min, R$ 320,00, atualizado há 20 dias: 2026-10-17)
+-- Opção A: Voadeira expressa piloto autônomo (11h = 660 min, R$ 320,00, atualizado há 20 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(5, 2, 4, 'Porto de Manaus', 'Porto Fluvial de Tefé', 3, 2, 660, 320.00, 0, 'ida', '2026-10-17', 'Saída às 06:00. Cadastro colaborativo.');
+(5, 2, 4, 'Porto de Manaus', 'Porto Fluvial de Tefé', 3, 2, 660, 320.00, 0, 'ida', date('now', 'localtime', '-20 days'), 'Saída às 06:00. Cadastro colaborativo.');
 
--- Opção B: Barco regional Oliveira Navegações (1d 12h = 2160 min, R$ 190,00, atualizado há 5 dias: 2026-11-01)
+-- Opção B: Barco regional Oliveira Navegações (1d 12h = 2160 min, R$ 190,00, atualizado há 5 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(6, 2, 4, 'Porto da Manaus Moderna', 'Porto Fluvial de Tefé', 4, 1, 2160, 190.00, 0, 'ida', '2026-11-01', 'Saída 17:00.');
+(6, 2, 4, 'Porto da Manaus Moderna', 'Porto Fluvial de Tefé', 4, 1, 2160, 190.00, 0, 'ida', date('now', 'localtime', '-5 days'), 'Saída 17:00.');
 
--- Trecho de teste de desatualização (> 30 dias): Parintins -> Manaus (atualizado há 45 dias: 2026-09-22)
+-- Trecho de teste de desatualização (> 30 dias): Parintins -> Manaus (atualizado há 45 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(7, 5, 2, 'Porto de Parintins', 'Porto da Manaus Moderna', 4, 1, 1080, 120.00, 0, 'ida', '2026-09-22', 'Saída semanal.');
+(7, 5, 2, 'Porto de Parintins', 'Porto da Manaus Moderna', 4, 1, 1080, 120.00, 0, 'ida', date('now', 'localtime', '-45 days'), 'Saída semanal.');
 
--- Trecho de teste para conexão impossível: Santarém -> Manaus que sai antes da chegada do voo (Saída 07:00 vs Chegada 09:20)
+-- TRECHOS DE RETORNO (Fluxo Inverso para testes de ida e volta - mantendo IDs 9 a 12)
+-- Manaus -> Belém (Barco Regional Amazon Star na descida do rio: 4 dias = 96h = 5760 min, R$ 350,00, atualizado há 3 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(8, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 200.00, 0, 'ida', '2026-10-25', 'Horário incompatível para conexão.');
+(9, 2, 1, 'Porto da Manaus Moderna', 'Porto de Belém', 1, 1, 5760, 350.00, 0, 'volta', date('now', 'localtime', '-3 days'), 'Descida do rio Amazonas com escala em Santarém.');
 
--- TRECHOS DE RETORNO (Fluxo Inverso para testes de ida e volta)
--- Manaus -> Belém (Barco Regional Amazon Star na descida do rio: 4 dias = 96h = 5760 min, R$ 350,00)
+-- Manaus -> Belém (Avião regional Azul, 135 min, R$ 780,00, atualizado hoje)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(9, 2, 1, 'Porto da Manaus Moderna', 'Porto de Belém', 1, 1, 5760, 350.00, 0, 'volta', '2026-11-03', 'Descida do rio Amazonas com escala em Santarém.');
+(10, 2, 1, 'Aeroporto Eduardo Gomes', 'Aeroporto Internacional de Belém', 2, 8, 135, 780.00, 0, 'volta', date('now', 'localtime'), 'Voo de retorno direto regular.');
 
--- Manaus -> Belém (Avião regional Azul, 135 min, R$ 780,00)
+-- Tefé -> Manaus (Voadeira expressa piloto autônomo, 660 min, R$ 320,00, atualizado há 20 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(10, 2, 1, 'Aeroporto Eduardo Gomes', 'Aeroporto Internacional de Belém', 2, 8, 135, 780.00, 0, 'volta', '2026-11-06', 'Voo de retorno direto regular.');
+(11, 4, 2, 'Porto Fluvial de Tefé', 'Porto de Manaus', 3, 2, 660, 320.00, 0, 'volta', date('now', 'localtime', '-20 days'), 'Retorno Tefé-Manaus expressa.');
 
--- Tefé -> Manaus (Voadeira expressa piloto autônomo, 660 min, R$ 320,00)
+-- Tefé -> Manaus (Barco regional Oliveira Navegações, 2160 min, R$ 190,00, atualizado há 5 dias)
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(11, 4, 2, 'Porto Fluvial de Tefé', 'Porto de Manaus', 3, 2, 660, 320.00, 0, 'volta', '2026-10-17', 'Retorno Tefé-Manaus expressa.');
-
--- Tefé -> Manaus (Barco regional Oliveira Navegações, 2160 min, R$ 190,00)
-INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(12, 4, 2, 'Porto Fluvial de Tefé', 'Porto da Manaus Moderna', 4, 1, 2160, 190.00, 0, 'volta', '2026-11-01', 'Retorno Tefé-Manaus de linha.');
+(12, 4, 2, 'Porto Fluvial de Tefé', 'Porto da Manaus Moderna', 4, 1, 2160, 190.00, 0, 'volta', date('now', 'localtime', '-5 days'), 'Retorno Tefé-Manaus de linha.');
 
 -- 6. HORÁRIOS (com bitmask: Seg=1, Ter=2, Qua=4, Qui=8, Sex=16, Sab=32, Dom=64)
 INSERT INTO horario_operacao (trecho_id, hora_partida, hora_chegada_estimada, dias_semana_mask, frequencia_descricao) VALUES
@@ -110,8 +107,7 @@ INSERT INTO horario_operacao (trecho_id, hora_partida, hora_chegada_estimada, di
 (5, '06:00:00', '17:00:00', 25, 'Segundas, Quintas e Sextas-feiras'),
 (6, '17:00:00', '05:00:00', 16, 'Sextas-feiras'),
 (7, '12:00:00', '06:00:00', 32, 'Semanal (Sábados)'),
-(8, '07:00:00', '01:00:00', 127, 'Partida matinal incompatível'),
-(9, '18:00:00', '14:00:00', 20, 'Quartas e Sextas-feiras'),
+(9, '18:00:00', '18:00:00', 20, 'Quartas e Sextas-feiras'),
 (10, '14:00:00', '16:15:00', 127, 'Diário'),
 (11, '06:00:00', '17:00:00', 25, 'Segundas, Quintas e Sextas-feiras'),
 (12, '17:00:00', '05:00:00', 16, 'Sextas-feiras');

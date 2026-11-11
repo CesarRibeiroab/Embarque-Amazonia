@@ -25,15 +25,15 @@ with open(seed_path, 'r', encoding='utf-8') as f:
 
 con.commit()
 
-print("BANCO DE DADOS EXECUTADO COM SUCESSO!")
+print("BANCO DE DADOS RECRIADO E POPULADO COM SUCESSO!")
 count_loc = cur.execute("SELECT COUNT(*) FROM localidade").fetchone()[0]
 count_mod = cur.execute("SELECT COUNT(*) FROM modal").fetchone()[0]
 count_trechos = cur.execute("SELECT COUNT(*) FROM trecho").fetchone()[0]
 
-print(f"Registros carregados da base:")
+print(f"Registros carregados da base (datas relativas à execução de hoje):")
 print(f"  - Localidades: {count_loc}")
 print(f"  - Modais (Domínio Regional): {count_mod} (todos os 10 modais cadastrados)")
-print(f"  - Trechos: {count_trechos}")
+print(f"  - Trechos: {count_trechos} (IDs canônicos 1-7 e retornos 9-12)")
 
 # Listar os 10 modais
 print("\nModais cadastrados:")

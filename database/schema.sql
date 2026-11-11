@@ -3,6 +3,9 @@
 -- PROJETO INTEGRADO II — CIÊNCIA DA COMPUTAÇÃO (CESUPA)
 -- Esquema Físico Relacional
 -- Dialeto do MVP Local: SQLite 3 (em desenvolvimento local)
+-- Nota sobre datas relativas no seed.sql:
+--   - O seed utiliza date('now', 'localtime', '-N days'), função específica do SQLite.
+--   - Na migração para PostgreSQL 15+, substituir por: CURRENT_DATE - N
 -- Migração PostgreSQL 15+ prevista para homologação:
 --   - Trocar AUTOINCREMENT por BIGSERIAL ou GENERATED ALWAYS AS IDENTITY
 --   - Trocar BOOLEAN DEFAULT 1/0 por BOOLEAN DEFAULT TRUE/FALSE
