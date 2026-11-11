@@ -1,7 +1,7 @@
 # EMBARQUE AMAZÔNIA — DECISÕES TÉCNICAS E ROTEIRO DE ORIENTAÇÃO
 **Documento Executivo de Alinhamento para Reunião com o Professor**  
 **Projeto Integrado II • Ciência da Computação (CESUPA)**  
-**Data:** 10/11/2026  
+**Data:** 11/11/2026  
 **Autores:** César Augusto Borges Ribeiro, Fernando César Mourão Fonseca, Herbert Aciolly Leão de Jesus, Lucas Barros Mutran  
 
 ---
@@ -9,103 +9,83 @@
 ## 1. PROPOSTAS DE DECISÃO TÉCNICA DO PRODUTO (PARA RATIFICAÇÃO COM O PROFESSOR)
 
 > [!NOTE]
-> As decisões abaixo constituem a recomendação técnica consensual do grupo, aguardando ratificação formal das diretrizes da entrega final na orientação com o orientador.
+> As decisões abaixo consolidam a arquitetura adotada pela equipe na Semana 1 e os pontos abertos para ratificação com o orientador.
 
 ### Decisão 1: Stack Tecnológica Unificada (Python / FastAPI)
-- **Motivação:** O núcleo do projeto é o motor algorítmico de roteamento em grafos multimodais (`api/engine/route_engine.py`). Para eliminar divergências de linguagem entre motor e back-end, adotamos **Python com FastAPI** como back-end unificado.
-- **Back-end:** Python 3.10+ / FastAPI, implementando os endpoints de consulta do contrato `docs/openapi.yaml` (`GET /api/v1/localidades` e `GET /api/v1/rotas` com suporte a filtros de modais e critérios).
-- **Banco de Dados:** DDL dialetado em SQLite para desenvolvimento local (gerado dinamicamente via `database/init_db.py`), com o ajuste de DDL para dialeto PostgreSQL (`SERIAL` / sequences) previsto para a subida ao ambiente de homologação.
-- **Front-end Web/Mobile:** React + Vite configurado como PWA (service worker e IndexedDB para consulta de rotas salvas em modo offline).
+- **Motivação:** O núcleo do projeto é o motor algorítmico de roteamento em grafos multimodais (`api/engine/route_engine.py`). Para eliminar divergências de linguagem entre motor e servidor, adotamos **Python com FastAPI**.
+- **Back-end:** Python 3.10+ (validado em 3.14.3) com FastAPI, implementando as **2 operações de consulta do passageiro** do contrato `docs/openapi.yaml` (`GET /api/v1/localidades` com autocomplete `?busca=` e `GET /api/v1/rotas` com critérios, filtro de modais e filtro de data). O CRUD administrativo e `/api/v1/rotas/{id}` ficam para a Semana 2.
+- **Banco de Dados:** SQLite 3 em desenvolvimento local (recriado por `database/init_db.py` com datas relativas à execução via `date('now', 'localtime', '-N days')`), com migração prevista para PostgreSQL 15+ em homologação.
+- **Front-end Web (`web/`):** React + Vite contendo atualmente uma **tela funcional inicial de busca e listagem de resultados** em layout mobile responsivo (largura de referência 360 px). As 16 telas completas (P01–P10 e A01–A06) e a camada offline em IndexedDB estão previstas para a Semana 2 (não há manifest nem service worker).
 - **Estrutura do Repositório (Mono-repo):** `/api`, `/web`, `/docs`, `/database`.
 
-### Decisão 2: Escopo do MVP e Alinhamento com os Requisitos
-- **O que ENTRA no MVP:**
-  1. Catálogo e autocompletar de localidades atendidas (municípios e portos).
-  2. Motor de busca multimodal em grafo com até 3 trechos por rota.
-  3. Ordenação pelos 3 critérios: **Menor custo**, **Menor tempo** e **Mais confiável** (definido pela recência da atualização dos dados, onde dias desde a última atualização determinam a confiabilidade).
-  4. Comparação de até 3 alternativas e detalhe de trecho.
-  5. Salvar rota e consulta offline (P09) via IndexedDB.
-  6. Painel administrativo descentralizado para cadastro de trechos por operadores locais (telas A01–A06).
-  7. Observação textual sobre regime hídrico (cheia/vazante).
-- **O que NÃO ENTRA no MVP:**
-  - Reserva/venda de passagens e gateway de pagamento.
-  - Alertas dinâmicos de enchentes em tempo real e push notifications.
-  - Bot de WhatsApp.
-  - Login de passageiro.
-  - Ponto de transbordo como entidade complexa de infraestrutura física (a conexão é tratada unicamente como intervalo de tempo de espera entre o desembarque de um trecho e o embarque no subsequente).
-  - Fator numérico multiplicador de seca rígido (mantido como parâmetro opcional/configurável no algoritmo para evitar afirmações sem base hidrológica estrita).
+### Decisão 2: Escopo do MVP e Limitações Reconhecidas
+- **Dentro do MVP:**
+  1. Catálogo e autocomplete de localidades atendidas (`GET /api/v1/localidades?busca=`).
+  2. Motor em grafo limitado a até 3 trechos por rota, exibindo **até 5 opções ordenadas** após a ordenação.
+  3. Três critérios de ordenação: **Menor tempo**, **Menor custo** e **Mais confiável** (recência em dias desde `data_ultima_atualizacao`), além de filtro por modal e data.
+  4. Salvar rota e consulta offline (P09 em IndexedDB) e painel administrativo de cadastro (telas A01–A06) — planejados na etapa da Semana 2.
+- **Fora do MVP:** reserva e pagamento de passagens, alertas hidrológicos em tempo real, bot de WhatsApp, login de passageiro, ponto de transbordo como entidade própria e fator numérico rígido de seca.
+- **Limitações operacionais atuais (Semana 1):** validação de dia da semana aplicada pela data única de partida em todos os trechos da rota, conexões calculadas no mesmo dia sem virada de madrugada, leitura apenas do primeiro horário ativo por trecho e ausência de ajuste de fuso horário (Belém UTC-3 vs. Manaus UTC-4).
 
-### Decisão 3: Padrões de Dados e Selos Visuais
-- **Selos Padronizados:**
-  - `Menor custo` (verde #2E7D32)
-  - `Menor tempo` (azul #1F6FB2)
-  - `Mais confiável` (verde-azulado #00796B)
-  - `Desatualizado` (amarelo #F2A900 para dados com última atualização acima de 30 dias)
-- **Conceito de Confiabilidade:** Quão recente é a data da última atualização dos dados cadastrados do trecho (`data_ultima_atualizacao`). Quanto mais recente, mais confiável a estimativa; dados com mais de 30 dias recebem o indicativo visual de desatualização.
-- **Natureza dos Dados:** Os dados de teste são **dados de exemplo ilustrativos e canônicos**, situados dentro das faixas operacionais identificadas no levantamento, sem qualquer pretensão de representar tabelas comerciais vigentes de operadores.
+### Decisão 3: Padrões de Dados, Datas Relativas e Selos Visuais
+- **Selos Padronizados:** `Menor custo` (`#2E7D32`), `Menor tempo` (`#1F6FB2`), `Mais confiável` (`#00796B`) e `Desatualizado` (`#F2A900` com texto escuro para trechos com mais de 30 dias). **Selos comparativos são atribuídos apenas quando existem 2 ou mais opções** na busca; opção única não recebe selo comparativo.
+- **Data de referência e Seed Relativo:** Por padrão, o motor usa a data atual do sistema (`date.today()`), com suporte opcional à variável `DATA_REFERENCIA`. O `seed.sql` gera datas relativas à criação do banco, por isso `init_db.py` deve ser reexecutado no dia da demonstração.
+- **Natureza dos Dados:** Os dados de exemplo no `seed.sql` e no contrato OpenAPI são **ilustrativos** para validação de engenharia, não representando tabelas oficiais de operadores.
 
 ### Decisão 4: Declaração Real de Uso de Inteligência Artificial Generativa
-*Em estrito cumprimento à Resolução nº 001/2026 do CESUPA:*
-- **Ferramenta Utilizada:** Antigravity AI / Large Language Models.
-- **Atuação Efetiva da Ferramenta:** Um agente autônomo de IA operou diretamente no repositório realizando edição de código, criação de esquemas DDL e commits no Git. A ferramenta acelerou a implementação: gerou o esqueleto do contrato OpenAPI (`docs/openapi.yaml`), o script SQL (`schema.sql` e `seed.sql`), o algoritmo em profundidade com poda (`api/engine/route_engine.py`), a suíte de testes unitários e de integração (`api/tests/`), os endpoints FastAPI (`api/main.py`), o esqueleto web React+Vite (`web/`) e apoiou a revisão ortográfica e formatação ABNT da Introdução.
-- **Atuação dos Discentes:** Concepção da arquitetura e dos requisitos, definição dos parâmetros e regras de negócio da Amazônia Legal, parametrização dos dados de teste, auditoria de consistência, correção manual das incongruências do motor e do banco, e validação funcional de todos os testes no terminal. Cada integrante domina a lógica do que foi construído em suas respectivas frentes.
+*Em cumprimento à regulamentação acadêmica do CESUPA para uso de IA Generativa:*
+- **Ferramenta Utilizada:** Antigravity AI / Large Language Models e agente de execução em repositório.
+- **Atuação Efetiva da Ferramenta:** A IA generativa gerou o motor de roteamento (`api/engine/route_engine.py`), o esquema SQL (`database/schema.sql` e `seed.sql`), o contrato OpenAPI (`docs/openapi.yaml`), as suítes de testes (`api/tests/`), os endpoints FastAPI (`api/main.py`) e o esqueleto inicial da busca web (`web/`), além de auxiliar na estruturação e revisão ortográfica/ABNT da Seção 1 do artigo. Um agente autônomo operou diretamente no repositório na edição de arquivos e commits Git.
+- **Atuação dos Discentes:** Definição de escopo, requisitos e regras de negócio da Amazônia Legal, parametrização dos casos canônicos ilustrativos, auditoria de inconsistências entre código, banco e documentação, definição dos ajustes necessários e validação funcional das entregas no terminal.
 
 ---
 
-## 2. ROTEIRO UNIFICADO DE APRESENTAÇÃO AO PROFESSOR (3 MINUTOS)
+## 2. ROTEIRO DE DEMONSTRAÇÃO DE 5 MINUTOS (12/11/2026)
 
 > [!TIP]
-> **Postura na reunião:** Objetiva, honesta e técnica. O orientador já conhece o protótipo e a ideia; ele quer constatar o avanço de engenharia sem exageros factuais.
+> **Transparência desde o início:** informar logo ao abrir a fala o que **não** existe implementado nesta entrega (telas além da busca no `web/`, cadastro administrativo, login e uso offline).
 
-```
-[0:00 - 0:45] CONTEXTUALIZAÇÃO DO AVANÇO
-"Professor, nas orientações anteriores nós demonstramos o escopo conceitual e o protótipo
-navegável no Figma. Nesta semana, focamos em construir a fundação de engenharia para
-destravar o front-end e o back-end em paralelo: formalizamos o contrato da API, organizamos
-o repositório em mono-repo para o GitHub, estruturamos o banco relacional e implementamos
-o motor de rotas em FastAPI com testes automatizados."
+```text
+[0:00 - 0:45] CONTEXTO E ESCOPO HONESTO
+- Apresentar a proposta multimodal e esclarecer que o protótipo das 16 telas está no Figma;
+  nesta entrega da Semana 1, o repositório traz o banco, o motor em grafo, 2 das 6 operações da API
+  e uma tela inicial funcional de busca e listagem em web/.
 
-[0:45 - 1:45] BANCO DE DADOS E CONTRATO
-"No banco de dados, cadastramos os 10 modais do domínio amazônico e modelamos a relação
-N:N entre operadores e modais e a data da última atualização dos trechos. O DDL está em
-SQLite no ambiente de desenvolvimento local, com ajuste para dialeto PostgreSQL previsto
-para a homologação.
-A especificação OpenAPI 3.1 no docs/openapi.yaml documenta a busca com os três critérios
-(Menor custo, Menor tempo, Mais confiável) e padroniza as respostas de sucesso e erro."
+[0:45 - 1:45] TERMINAL EM CLONE LIMPO (BANCO + 32 TESTES)
+- Executar `python database/init_db.py` (7 localidades, 10 modais, 11 trechos com datas relativas).
+- Executar `python database/mostrar_dados.py` para inspecionar os dados no terminal.
+- Executar `python api/tests/test_route_engine.py` (17 testes unitários) e
+  `python api/tests/test_api.py` (15 testes de integração) = 32 testes passando.
 
-[1:45 - 2:30] DEMONSTRAÇÃO DO MOTOR E DA API FASTAPI (AO VIVO)
-[Executar: python api/tests/test_route_engine.py && python api/tests/test_api.py]
-"Temos 24 testes automatizados passando 100%:
-- 13 testes unitários no motor (cálculo dinâmico de conexão, rejeição temporal de partidas anteriores,
-  Rotas 1, 2 e 3, recência/desatualização, filtro por dia da semana e modais, e idempotência).
-- 11 testes de integração HTTP na API REST (busca multicritério, sem resultados 200 OK,
-  validação 422 de parâmetros/datas/origem e persistência de IDs determinísticos).
-Ao subir o FastAPI com uvicorn api.main:app, podemos ver a busca funcionando no Swagger UI."
+[1:45 - 3:00] SWAGGER UI (http://localhost:8000/docs)
+- Belém -> Manaus em 20/11/2026 (sexta): 3 opções com selos e conexão calculada em 280 min;
+- Mesma busca no sábado 21/11/2026: apenas o voo diário (`rota-t2`);
+- Volta Manaus -> Belém (`rota-t10` e `rota-t9`); Cametá -> Alenquer (HTTP 200, lista vazia);
+- Caso de erro HTTP 422 padronizado em ErroPadrao (ex.: destino ausente ou origem = destino).
 
-[2:30 - 3:00] ALINHAMENTO DAS DIRETRIZES DA ENTREGA FINAL
-"Para consolidarmos o Marco 1, precisamos apenas registrar com o senhor as confirmações das
-diretrizes da entrega final: prazo e horário limites oficiais, canal de submissão no AVA,
-formato do artigo (.doc ou .docx) e como o senhor prefere que a declaração de uso de IA seja anexada."
+[3:00 - 4:00] FRONT-END MOBILE 360 px (http://localhost:5173)
+- Executar busca Belém -> Manaus em 20/11/2026 mostrando autocomplete (?busca=bel),
+  preços em R$, selos coloridos, recência em dias, conexões e expansão dos trechos.
+
+[4:00 - 4:30] PRISM CLI ESTÁTICO E PLANO DA SEMANA 2
+- Demonstrar mock estático (http://127.0.0.1:4010) com `Prefer: example=rota_1_belem_manaus` e
+  `example=rota_2_manaus_tefe` (exemplos estáticos do contrato).
+- Mostrar `docs/telas_x_api.md` como mapa de lacunas para a Semana 2 e o plano do artigo
+  (Seções 2 a 6 em 19/11).
 ```
 
 ---
 
-## 3. BANCO DE PERGUNTAS E RESPOSTAS AUDITADO (SEM AFIRMAÇÕES ARRISCADAS)
+## 3. BANCO DE PERGUNTAS E RESPOSTAS (AUDITADO)
 
 ### P1: "Vocês já têm uma API conectada a um serviço real de barcos na Amazônia?"
-> **Resposta Honesta:** *"Não, professor. Em nosso levantamento técnico, **não identificamos APIs públicas abertas e documentadas** para a bilhetagem ou horários dos barcos regionais de linha. Por isso, a arquitetura do Embarque Amazônia contempla um painel de cadastro descentralizado (telas A01–A06), permitindo que empresas e cooperativas locais alimentem e mantenham suas rotas, enquanto modais regulares como a aviação podem consumir agregadores consolidados."*
+> *"Não, professor. Até o momento não identificamos APIs públicas abertas documentadas para a bilhetagem ou horários de barcos regionais de linha, e o contato direto com operadores privados (iBarco/Navega Norte) ficou como trabalho futuro / limitação. Por isso, a arquitetura contempla o painel de cadastro descentralizado (A01–A06), previsto para a Semana 2."*
 
-### P2: "Como o algoritmo trata a seca dos rios e o atraso das viagens?"
-> **Resposta Precisa:** *"No escopo do nosso MVP, o tratamento prioritário é a exibição de avisos informativos sobre o regime hídrico cadastrados no trecho (cheia ou vazante). Do ponto de vista algorítmico, incluímos um parâmetro configurável de acréscimo temporal na navegação fluvial, mas o tratamos como estimativa aproximada, pois a variação real de tempo depende da calha de cada rio e do calado da embarcação."*
+### P2: "Como o algoritmo trata a seca dos rios e atrasos?"
+> *"No MVP, exibimos apenas observações textuais informativas sobre regime hídrico cadastradas no trecho. Decidimos não aplicar um fator numérico fixo de atraso sobre a duração sem base hidrológica empírica para não fabricar estimativas imprecisas."*
 
-### P3: "Por que desenvolver um motor próprio em vez de usar o Google Maps ou OSRM?"
-> **Resposta Precisa:** *"Os provedores globais como Google Routes e OSRM são excelentes para redes viárias urbanas e rodovias pavimentadas, mas **não cobrem de forma integrada os barcos regionais da Amazônia, suas especificidades de acomodação (rede vs. camarote), os intervalos reais de transbordo nos cais e a grade de horários fluviais**. Nosso motor foi projetado especificamente para conectar modais heterogêneos onde o transporte hidroviário é o elo principal da viagem."*
+### P3: "Por que o Prism devolve sempre a mesma resposta quando trocamos os parâmetros?"
+> *"Porque o Prism funciona como mock estático do contrato OpenAPI (`docs/openapi.yaml`), respondendo exemplos fixos selecionados pelo cabeçalho `Prefer`. Toda a lógica dinâmica em grafo está no FastAPI + `route_engine.py`."*
 
-### P4: "Como está estruturada a lista de referências do artigo?"
-> **Resposta Transparente:** *"A Seção 1 do artigo já referencia formalmente as fontes estruturantes citadas no texto — incluindo relatórios do IPEA, ANTAQ, ANAC e dados setoriais da CNT. Temos uma lista expandida de referências bibliográficas mapeadas para os modais e a modelagem, as quais estão sendo conferidas uma a uma para inserção nas Seções 2 e 3 conforme os rascunhos forem integrados."*
-
-### P5: "Como é calculada a confiabilidade de uma rota?"
-> **Resposta Alinhada:** *"A confiabilidade no sistema reflete a **recência da atualização das informações** cadastradas. Trechos atualizados recentemente possuem confiabilidade máxima; rotas cujos trechos não recebem atualização há mais de 30 dias são sinalizadas visualmente com o selo 'Desatualizado', orientando o viajante a confirmar os horários antes do embarque."*
-
-### P6: "Por que o Prism devolve a mesma rota se eu mudar os parâmetros no mock?"
-> **Resposta Precisa:** *"O mock do Prism simula a conformidade do contrato OpenAPI estático para permitir que a equipe de front-end programe os componentes de tela sem depender da subida do back-end. A lógica de busca dinâmica, grafo ponderado e filtros de modais está implementada no FastAPI e no motor em Python (`api/main.py` e `api/engine/route_engine.py`), que demonstramos executando diretamente sobre a base de dados."*
+### P4: "Como é calculada a confiabilidade?"
+> *"Pela recência em dias desde `data_ultima_atualizacao` até a data de referência. Quanto menor o número de dias, mais confiável. Se houver 2 ou mais opções, a mais recente recebe `Mais confiável`; qualquer trecho acima de 30 dias recebe o selo `Desatualizado` (mesmo isolado)."*

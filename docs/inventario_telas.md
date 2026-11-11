@@ -1,15 +1,14 @@
 # EMBARQUE AMAZÔNIA — PROJETO INTEGRADO II
 ## Módulo 2: Mapa de Navegação e Inventário Detalhado das 16 Telas
 **Responsável:** César Augusto Borges Ribeiro (Coordenação Geral)  
-**Card Trello de Referência:** [https://trello.com/c/QCtkJrPE](https://trello.com/c/QCtkJrPE)  
 **Público-Alvo das Telas:** Passageiros Ribeirinhos/Urbanos e Operadores/Cadastradores de Transportes  
-**Data:** 28/10/2026  
+**Atualização:** 11/11/2026  
 
 ---
 
-### 1. MAPA DE NAVEGAÇÃO INTEGRADO (DIAGRAMA DE FLUXO)
+### 1. MAPA DE NAVEGAÇÃO CONCEITUAL (PROTÓTIPO NO FIGMA)
 
-O sistema divide-se em dois macroambientes: o **Fluxo do Passageiro (Mobile 360×800)**, voltado para consulta rápida, comparação e visualização offline; e o **Fluxo de Cadastro Administrativo (Desktop 1440×1024)**, voltado para a alimentação dos trechos, operadores e alertas hidrológicos.
+O sistema é concebido no Figma em dois fluxos visuais: o **Fluxo do Passageiro (Mobile 360×800 px)** e o **Fluxo de Cadastro Administrativo (Desktop 1440×1024 px)**.
 
 ```mermaid
 flowchart TD
@@ -23,7 +22,7 @@ flowchart TD
         P07["P07 - Detalhe Específico do Trecho"]
         P08["P08 - Mapa Interativo da Rota"]
         P09["P09 - Rotas Salvas & Consulta Offline"]
-        P10["P10 - Estados do Sistema (Offline/Sem Rota/Aviso)"]
+        P10["P10 - Estados do Sistema (Sem Rota / Erro / Carregando)"]
 
         P01 -->|Tocar em Origem/Destino| P02
         P02 -->|Localidade Selecionada| P01
@@ -48,77 +47,77 @@ flowchart TD
         A02["A02 - Painel Geral de Gestão de Trechos"]
         A03["A03 - Formulário de Cadastro/Edição de Trecho"]
         A04["A04 - Cadastro e Vínculo de Operador"]
-        A05["A05 - Cadastro de Localidade & Ponto de Transbordo"]
-        A06["A06 - Confirmação, Auditoria e Feedback"]
+        A05["A05 - Cadastro de Localidade"]
+        A06["A06 - Confirmação e Resumo"]
 
         A01 -->|Credenciais Válidas| A02
         A02 -->|Botão: 'Novo Trecho'| A03
         A02 -->|Botão: 'Gerenciar Operadores'| A04
-        A02 -->|Botão: 'Pontos & Transbordos'| A05
+        A02 -->|Botão: 'Localidades'| A05
         
         A03 -->|Submeter Formulário| A06
         A04 -->|Submeter Formulário| A06
         A05 -->|Submeter Formulário| A06
         
-        A06 -->|Retornar ao Dashboard| A02
+        A06 -->|Retornar ao Painel| A02
     end
 ```
 
 ---
 
-### 2. INVENTÁRIO MINUCIOSO DAS 16 TELAS
+### 2. INVENTÁRIO DAS 16 TELAS (COM DELIMITAÇÃO DE MVP vs. FORA DO MVP)
 
----
+Os critérios oficiais de ordenação do MVP são **Menor tempo**, **Menor custo** e **Mais confiável** (baseado na recência da atualização). Itens de concepção visual não cobertos pelo MVP estão explicitamente sinalizados abaixo.
 
-#### 📱 BLOCO 1: PASSAGEIRO — MÓDULO DE BUSCA E RESULTADOS (Telas P01 a P04)
-* **Responsável no Figma:** Hebert  
-* **Resolução:** Mobile Android (360 × 800 px)  
-* **Página Figma:** `02_Passageiro`  
+#### 📱 BLOCO 1: PASSAGEIRO — BUSCA E RESULTADOS (Telas P01 a P04)
+* **Responsável no Figma:** Herbert | **Resolução:** Mobile `360 × 800 px` | **Página Figma:** `02_Passageiro`
 
-| ID | Nome da Tela | Objetivo do Usuário | Componentes Chave da UI | Transições e Ações |
-|:---:|---|---|---|---|
-| **P01** | **Home / Busca Rápida** | Ponto de entrada do passageiro para definir rota desejada e acessar atalhos. | - Barra superior com logo *Embarque Amazônia* e indicador de conectividade.<br>- Inputs táteis para "De onde você sai?" e "Para onde quer ir?".<br>- Seletor rápido de data da viagem.<br>- Botão de inversão de sentido (🔄).<br>- Botão primário com ícone de lupa: "Calcular Rotas".<br>- Card de aviso contextual sobre vazante dos rios.<br>- Barra inferior de navegação: [Busca], [Rotas Salvas], [Avisos]. | - Tocar em Origem/Destino abre **P02**.<br>- Tocar em "Filtros" abre **P03**.<br>- Tocar em "Calcular Rotas" abre **P04**.<br>- Tocar em "Rotas Salvas" abre **P09**. |
-| **P02** | **Escolher Localidade** | Localizar cidades, comunidades ribeirinhas, portos ou aeroportos por digitação preditiva. | - Campo de busca focado com teclado ativo.<br>- Abas de filtro rápido: [Todos], [Portos/Cais], [Cidades], [Comunidades].<br>- Lista de resultados com ícones discriminando tipo de infraestrutura.<br>- Seção de "Buscas Recentes" (ex: Breves, Santarém, Belém). | - Ao tocar em uma localidade, seleciona o ponto e retorna a **P01**.<br>- Botão "Cancelar/Voltar" retorna a **P01**. |
-| **P03** | **Filtros e Preferências** | Customizar critérios de otimização da rota e excluir modais indesejados. | - Grupo de seleção única de critério principal: ( ) Mais Rápida, ( ) Mais Barata, ( ) Menos Transbordos.<br>- Switches liga/desliga de modais aceitos: [x] Barco Regional, [x] Lancha/Voadeira, [x] Ônibus, [ ] Voo Comercial.<br>- Seletor de conforto: acomodação mínima (Rede / Camarote).<br>- Toggle: "Ocultar trechos com alerta severo de estiagem".<br>- Botão fixo no rodapé: "Aplicar Filtros". | - Tocar em "Aplicar Filtros" salva as preferências e direciona para a lista filtrada em **P04**.<br>- Ícone de fechar (X) descarta alterações e retorna a **P01**. |
-| **P04** | **Lista de Resultados** | Apresentar as opções de itinerários multimodais calculados para o trajeto. | - Cabeçalho fixo resumindo Origem → Destino e data.<br>- Filtro rápido em pílulas: [Mais Barata R$ 70], [Mais Rápida 6h40m].<br>- Cards de Rota com hierarquia visual estrita:<br>  * Tags dos modais envolvidos (ex: 🚤 Voadeira + 🚢 Balsa + 🚌 Ônibus).<br>  * Duração total e horário previsto de chegada.<br>  * Valor estimado total (ex: R$ 135,00).<br>  * Número de transbordos.<br>  * Tag de alerta (ex: ⚠️ Conexão de 35 min em Camará).<br>- Botão de checkbox para marcar rota para comparação. | - Tocar no card leva para **P06**.<br>- Selecionar 2 ou mais rotas habilita botão flutuante "Comparar (2)", levando a **P05**.<br>- Sem conexão ou sem rotas exibe estado alternativo em **P10**. |
+| ID | Nome da Tela | Objetivo e Escopo | Componentes da UI e Classificação no MVP |
+|:---:|---|---|---|
+| **P01** | **Home / Busca Rápida** | Entrada principal de consulta origem → destino. | **MVP:** Campos Origem/Destino, seletor de data, critério, botão Buscar.<br>**Fora do MVP:** Aba/módulo "Avisos" e card dinâmico de alertas sazonais em tempo real. |
+| **P02** | **Escolher Localidade** | Localizar cidades, portos ou aeroportos por busca textual. | **MVP:** Campo de busca (`GET /api/v1/localidades?busca=`) com nome, UF e tipo/código IATA.<br>**Fora do MVP:** Abas específicas e buscas recentes persistidas em servidor. |
+| **P03** | **Filtros e Preferências** | Selecionar critério e modais permitidos. | **MVP:** Critérios oficiais (**Menor tempo**, **Menor custo**, **Mais confiável**) e switches dos 10 modais canônicos.<br>**Fora do MVP:** Critério "Menos Transbordos", filtro de conforto avançado e toggle de alerta severo de estiagem. |
+| **P04** | **Lista de Resultados** | Exibir opções ordenadas (até 5 opções). | **MVP:** Cards com modais, preço em BRL, duração, conexões, selos (`Menor tempo`, `Menor custo`, `Mais confiável`, `Desatualizado`) e recência em dias.<br>**Fora do MVP:** Horário previsto de chegada calculado e alerta dinâmico de conexão curta em tempo real. |
 
 ---
 
 #### 📱 BLOCO 2: PASSAGEIRO — DETALHES, MAPA E ESTADOS (Telas P05 a P10)
-* **Responsável no Figma:** Lucas  
-* **Resolução:** Mobile Android (360 × 800 px)  
-* **Página Figma:** `02_Passageiro`  
+* **Responsável no Figma:** Lucas | **Resolução:** Mobile `360 × 800 px` | **Página Figma:** `02_Passageiro`
 
-| ID | Nome da Tela | Objetivo do Usuário | Componentes Chave da UI | Transições e Ações |
-|:---:|---|---|---|---|
-| **P05** | **Comparar Opções** | Comparar atributos de 2 a 3 rotas lado a lado para subsidiar a escolha. | - Tabela visual dividida em colunas (Rota 1 vs Rota 2):<br>  * Preço total estimado (R$ 70 vs R$ 135).<br>  * Duração de viagem (12h vs 6h 40min).<br>  * Quantidade de conexões/transbordos (0 vs 2).<br>  * Modais utilizados.<br>  * Risco de atraso por sazonalidade.<br>- Botão de seleção "Escolher Esta Rota" sob cada coluna. | - Tocar em "Escolher Esta Rota" direciona diretamente ao detalhe em **P06**.<br>- Botão superior esquerdo de voltar retorna a **P04**. |
-| **P06** | **Detalhe da Rota** | Visualizar a cadeia cronológica (timeline) completa dos trechos e transbordos. | - Resumo superior: Custo total, duração e pegada de transbordo.<br>- Linha do tempo vertical ilustrada:<br>  * Ponto de Partida com horário.<br>  * Card do Trecho 1 (modal, operador, duração).<br>  * Cartão de Ponto de Transbordo (ex: "Atracadouro de Camará — 35 min de espera").<br>  * Card do Trecho 2.<br>- Botão flutuante inferior: "Salvar para Acesso Offline" (💾).<br>- Botão secundário: "Ver Traçado no Mapa" (🗺️). | - Tocar no card de qualquer trecho abre **P07**.<br>- Tocar em "Ver Traçado no Mapa" abre **P08**.<br>- Tocar em "Salvar Offline" armazena o itinerário e notifica envio para **P09**. |
-| **P07** | **Detalhe do Trecho** | Inspecionar regras operacionais, embarcação e contatos de um trecho isolado. | - Cabeçalho com nome do operador (ex: *Henvil Transportes* ou *N/M Santarém Star*).<br>- Especificações da embarcação/veículo: capacidade, acomodações disponíveis (Rede vs Camarote), climatização.<br>- Política de bagagem e cobrança de cargas rurais.<br>- Local exato de embarque (nome do porto/rampa/guichê).<br>- Telefone de contato do operador ou guichê para confirmação de saída. | - Botão superior esquerdo de retorno volta para **P06**.<br>- Botão "Ligar para Guichê" simula ação de contato externo. |
-| **P08** | **Mapa da Rota** | Conferir visualmente a rota geográfica e os vetores fluviais/rodoviários. | - Mapa vetorial renderizado com fundo de hidrografia amazônica.<br>- Traçado multicor (linha azul contínua para trecho fluvial, linha laranja para rodoviário).<br>- Pins interativos demarcando pontos de transbordo e cais.<br>- Bottom sheet recolhível com resumo da etapa selecionada.<br>- Controles de zoom (+/-) e centralização. | - Tocar em um pin exibe minicard de transbordo.<br>- Botão de retorno superior esquerdo volta para **P06**. |
-| **P09** | **Rotas Salvas / Offline** | Acessar itinerários previamente salvos sem depender de sinal 3G/4G nos rios. | - Indicador no topo: "Modo Offline — Dados armazenados no dispositivo".<br>- Lista de rotas salvas com data do download e hash de integridade.<br>- Botão de exclusão e atualização manual de cache.<br>- Acesso instantâneo a todos os horários e telefones de guichê mesmo desconectado. | - Tocar em uma rota salva abre a visão offline de **P06**.<br>- Acesso direto a partir do menu inferior da **P01**. |
-| **P10** | **Estados do Sistema** | Apresentar feedback claro em cenários de exceção, falhas ou restrições severas. | Estrutura modular demonstrando 4 variações visuais com ilustrações específicas:<br>1. *Sem Conexão:* "Você está navegando desconectado. Exibindo rotas salvas."<br>2. *Sem Resultados:* "Não encontramos rota combinada para esta data. Experimente alterar a tolerância de conexão."<br>3. *Alerta de Vazante Crítica:* "Trecho navegável suspenso por baixa do calado."<br>4. *Carregando Roteamento:* Skeleton screen animado de cálculo intermodal. | - Botão de ação contextual: "Tentar Novamente", "Ver Rotas Salvas" ou "Alterar Filtros". |
+| ID | Nome da Tela | Objetivo e Escopo | Componentes da UI e Classificação no MVP |
+|:---:|---|---|---|
+| **P05** | **Comparar Opções** | Comparar 2 a 3 rotas lado a lado. | **MVP:** Preço, duração, número de conexões, modais e recência.<br>**Fora do MVP:** Score numérico de risco de atraso por sazonalidade. |
+| **P06** | **Detalhe da Rota** | Timeline dos trechos componentes da rota. | **MVP:** Trechos em sequência (operador, terminais, duração, tarifa), tempo de conexão entre trechos e ação de salvar rota.<br>**Fora do MVP:** Ponto de transbordo como entidade física autônoma. |
+| **P07** | **Detalhe do Trecho** | Inspecionar dados operacionais do trecho. | **MVP:** Operador, terminais, duração, tarifa, horários e observação textual de regime hídrico.<br>**Fora do MVP:** Política de carga rural estruturada e ligação direta automatizada. |
+| **P08** | **Mapa da Rota** | Visualização simplificada do trajeto. | **MVP:** Referência visual com base nos terminais/localidades quando coordenadas estiverem cadastradas.<br>**Fora do MVP:** **Mapa vetorial interativo com camada completa de hidrografia amazônica** e pins com baldeação a pé/moto-táxi. |
+| **P09** | **Rotas Salvas / Offline** | Acesso a rotas previamente salvas no aparelho. | **MVP:** Salvamento local em IndexedDB indexado pelo ID determinístico da rota (`rota-t{ids}`).<br>**Fora do MVP:** **"Hash de integridade"** criptográfico e sincronização automática em segundo plano. |
+| **P10** | **Estados do Sistema** | Tratamento de carregando, erro e vazio. | **MVP:** Estados de carregamento, lista vazia (`200 OK`, `rotas: []`, ex.: Cametá → Alenquer) e erro amigável de rede/API.<br>**Fora do MVP:** Variação de "Alerta de Vazante Crítica" por telemetria ao vivo. |
 
 ---
 
 #### 💻 BLOCO 3: CADASTRO ADMINISTRATIVO E GESTÃO DE DADOS (Telas A01 a A06)
-* **Responsável no Figma:** Fernando  
-* **Resolução:** Desktop (1440 × 1024 px)  
-* **Página Figma:** `03_Cadastro`  
+* **Responsável no Figma:** Fernando | **Resolução:** Desktop `1440 × 1024 px` | **Página Figma:** `03_Cadastro`
 
-| ID | Nome da Tela | Objetivo do Usuário | Componentes Chave da UI | Transições e Ações |
-|:---:|---|---|---|---|
-| **A01** | **Login Administrativo** | Autenticação segura de operadores, agentes portuários e moderadores. | - Card centralizado de login com logo do *Embarque Amazônia*.<br>- Inputs: E-mail / CNPJ e Senha.<br>- Seletor de perfil: [Operador de Barco/Frota] / [Agente Regulador ARCON/ANTAQ].<br>- Link: "Solicitar credenciamento de cooperativa".<br>- Botão de acesso: "Entrar no Painel". | - Sucesso na autenticação direciona para **A02**.<br>- Erro de credenciais exibe toast de alerta em vermelho. |
-| **A02** | **Painel Geral de Trechos** | Visão consolidada da malha de transportes, trechos cadastrados e status ativo. | - Sidebar de navegação esquerda: [Trechos], [Operadores], [Localidades], [Alertas Sazonais].<br>- Tabela de dados (Data Grid) com filtros avançados:<br>  * ID, Origem, Destino, Modal, Operador, Duração, Tarifa Mínima, Status (Ativo / Alerta de Seca / Inativo).<br>- Barra de ações: botão "Cadastrar Novo Trecho", "Exportar CSV" e campo de busca global.<br>- Indicadores em cards de topo: Total de Trechos Ativos, Operadores Registrados, Alertas Vigentes. | - Clicar em "+ Novo Trecho" abre **A03**.<br>- Clicar em "Operadores" na sidebar abre **A04**.<br>- Clicar em "Localidades/Transbordos" abre **A05**.<br>- Clicar em uma linha da tabela abre **A03** em modo de edição. |
-| **A03** | **Cadastro de Trecho** | Inserir ou atualizar especificações de um segmento modal específico. | - Formulário estruturado em 3 blocos:<br>  1. *Origem e Destino:* Dropdowns de localidades cadastradas.<br>  2. *Operação:* Seleção de modal (dropdown), seleção de operador vinculado (N:N), sentido (ida/volta).<br>  3. *Tarifas e Horários:* Valor de acomodação em rede e camarote; máscara de frequência semanal (Seg a Dom) ou toggle "Sob Demanda".<br>  4. *Sazonalidade:* Checkbox "Sujeito a seca" com acréscimo estimado em minutos.<br>- Botões no rodapé: [Cancelar] e [Salvar Trecho]. | - Submissão bem-sucedida encaminha para tela de confirmação **A06**.<br>- Botão "Cancelar" retorna ao painel **A02** sem salvar. |
-| **A04** | **Cadastro de Operador** | Registrar companhias de navegação, viações, cooperativas ribeirinhas ou pilotos. | - Formulário de Pessoa Jurídica / Física:<br>  * Razão Social, Nome Fantasia, CNPJ/CPF.<br>  * Órgão Regulador (ANTAQ, ANTT, ARCON-PA, ARSEPAM, Municipal, Informal).<br>  * Checkboxes múltiplos de modais operados (Barco, Balsa, Voadeira).<br>  * Contatos operacionais (Telefone do guichê, WhatsApp para confirmação, website).<br>- Upload de comprovante de outorga/autorização de navegação. | - Salvar operador exibe modal de confirmação **A06**.<br>- Retorno ao painel **A02**. |
-| **A05** | **Cadastro de Localidade** | Mapear novos portos, cais comunitários, terminais rodoviários e tempos de transbordo. | - Campos de identificação: Nome da localidade, Município, Estado, Coordenadas de GPS (Latitude/Longitude).<br>- Tipo de infraestrutura: [Porto Fluvial], [Rampa/Cais Rústico], [Terminal Rodoviário], [Pista de Pouso].<br>- Seção de Vínculo de Transbordo:<br>  * Conectar a outra localidade vizinha informando distância (metros) e tempo médio de baldeação a pé ou moto-táxi (minutos). | - Salvar localidade direciona para **A06**.<br>- Permite retorno ágil ao painel **A02**. |
-| **A06** | **Confirmação e Auditoria** | Notificar sucesso da operação cadastral e prover resumo para conferência. | - Card de feedback com ícone de sucesso verde.<br>- Resumo dos dados cadastrados (ID gerado, trecho ativado, última atualização registrada com timestamp).<br>- Avisos automáticos de impacto na malha: "Este novo trecho viabilizou 4 novas rotas multimodais".<br>- Botões de ação: [Cadastrar Outro] ou [Voltar ao Painel Geral]. | - Clicar em "Voltar ao Painel" retorna a **A02**.<br>- Clicar em "Cadastrar Outro" limpa o formulário e reabre **A03**. |
+| ID | Nome da Tela | Objetivo e Escopo | Componentes da UI e Classificação no MVP |
+|:---:|---|---|---|
+| **A01** | **Login Administrativo** | Autenticação de operadores e administradores. | **MVP (Semana 2):** Login por credenciais e JWT (`bearerAuth` no `openapi.yaml`).<br>**Fora do MVP:** Portal público automatizado de credenciamento de cooperativas. |
+| **A02** | **Painel Geral de Trechos** | Listagem administrativa e manutenção de trechos. | **MVP (Semana 2):** Tabela via `GET /api/v1/trechos` e ações de novo trecho/operador/localidade.<br>**Fora do MVP:** Aba/painel "Alertas Sazonais" com telemetria e exportação analítica avançada. |
+| **A03** | **Cadastro de Trecho** | Inserção/edição de trecho na malha (`POST /api/v1/trechos`). | **MVP (Semana 2):** Origem, destino, operador, modal, sentido, horários/dias, acomodações (rede/camarote) e observação de regime.<br>**Fora do MVP:** Fator numérico automático de atraso por seca somado à duração. |
+| **A04** | **Cadastro de Operador** | Registro de empresa, cooperativa ou piloto (`POST /api/v1/operadores`). | **MVP (Semana 2):** Razão social, nome fantasia, tipo, órgão regulador/registro e modais operados (`operador_modal`).<br>**Fora do MVP:** **Upload de arquivos comprovantes de outorga** e integração direta com WhatsApp. |
+| **A05** | **Cadastro de Localidade** | Mapeamento de localidades atendidas. | **MVP (Semana 2):** Nome, UF, código IBGE/IATA e tipo de localidade.<br>**Fora do MVP:** **Vínculo de transbordo / Ponto de Transbordo** como entidade relacional própria com distância em metros entre portos. |
+| **A06** | **Confirmação e Auditoria** | Confirmação do cadastro salvo e atualização no motor. | **MVP (Semana 2):** Feedback de criação e recarga idempotente do grafo.<br>**Fora do MVP:** Cálculo automático prévio de quantas novas combinações o trecho viabilizou. |
 
 ---
 
-### 3. DIRETRIZES DE REVISÃO E SINCRONIZAÇÃO ENTRE TELAS
+### 3. DADOS DE REFERÊNCIA E IDENTIDADE VISUAL
 
-1. **Ordem de Informações Padronizada:** A ordem visual dos dados no Card de Rota de **P04** (Modais → Duração → Custo → Transbordos) deve ser rigorosamente replicada no Comparador (**P05**) e no Topo da Timeline (**P06**) pelo Lucas e Hebert.
-2. **Dados de Teste Idênticos:** O cadastro do trecho Breves → Camará na tela **A03** deve refletir exatamente os mesmos R$ 85,00 e 2h 45min que aparecem no fluxo de busca do passageiro (**P04** e **P06**).
-3. **Identidade Visual Unificada:** Fernando (desktop) e Lucas/Hebert (mobile) devem respeitar as mesmas cores de modais (Azul Petróleo `#005F73` para rios, Âmbar `#EE9B00` para sazonalidade) definidas no Módulo 1.
+* Os dados de exemplo ilustrativos usados no banco, na API e na interface estão unificados em [`database/seed.sql`](../database/seed.sql) e [`docs/escopo_requisitos.md`](escopo_requisitos.md) (Rotas 1, 2 e 3: **Belém → Manaus**, **Manaus → Tefé** e **Cametá → Alenquer**). Exemplos antigos do esboço inicial no Figma (*Breves → Camará → Belém*) não fazem parte da base executável e estão arquivados como referência conceitual.
+* A identidade visual segue o Kit de Estilo definido em [`docs/escopo_requisitos.md`](escopo_requisitos.md) (fonte **Inter**, primária `#1B5E3F`, secundária `#1F6FB2`, categorias de modais e cores dos selos).
 
+---
+
+### 4. ESTADO DE IMPLEMENTAÇÃO ATUAL
+
+* **Protótipo no Figma:** Todas as **16 telas** (`P01–P10` e `A01–A06`) existem hoje apenas como especificação visual/protótipo no Figma.
+* **Implementação em código (`web/`):** Existe no repositório **apenas uma tela funcional inicial de busca e listagem de resultados** (consumindo `GET /api/v1/localidades` e `GET /api/v1/rotas` da API FastAPI, com formatação em pt-BR, selos coloridos, recência em dias e expansão de trechos).
+* **Pendências previstas para a Semana 2:** Endpoints CRUD/autenticação na API, implementação das telas P01–P10 e A01–A06 no `web/` e camada offline em IndexedDB — detalhadas no mapeamento campo a campo em [`docs/telas_x_api.md`](telas_x_api.md).
