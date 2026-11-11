@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  corCategoriaModal,
+  estiloSelo,
+  formatarConexoes,
+  formatarData,
+  formatarDuracao,
+  formatarMoeda,
+  formatarRecencia,
+} from './utils/format';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -7,18 +16,56 @@ export default function App() {
   const [destino, setDestino] = useState('Manaus');
   const [dataViagem, setDataViagem] = useState('2026-11-20');
   const [criterio, setCriterio] = useState('menor_tempo');
+  const [sugestoesOrigem, setSugestoesOrigem] = useState([]);
+  const [sugestoesDestino, setSugestoesDestino] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState(null);
   const [resultado, setResultado] = useState(null);
+  const [expandidas, setExpandidas] = useState({});
+
+  const carregarSugestoes = async (termo, setter) => {
+    try {
+      const q = termo && termo.trim() ? `?busca=${encodeURIComponent(termo.trim())}` : '';
+      const res = await fetch(`${API_BASE}/localidades${q}`);
+      if (!res.ok) return;
+      const lista = await res.json();
+      if (Array.isArray(lista)) {
+        setter(lista);
+      }
+    } catch {
+      // Autocomplete silencioso quando a API está indisponível
+    }
+  };
+
+  useEffect(() => {
+    carregarSugestoes('', setSugestoesOrigem);
+    carregarSugestoes('', setSugestoesDestino);
+  }, []);
+
+  const handleOrigemChange = (valor) => {
+    setOrigem(valor);
+    carregarSugestoes(valor, setSugestoesOrigem);
+  };
+
+  const handleDestinoChange = (valor) => {
+    setDestino(valor);
+    carregarSugestoes(valor, setSugestoesDestino);
+  };
+
+  const alternarTrechos = (rotaId) => {
+    setExpandidas((prev) => ({ ...prev, [rotaId]: !prev[rotaId] }));
+  };
 
   const buscarRotas = async (e) => {
     e.preventDefault();
     setCarregando(true);
     setErro(null);
+    setExpandidas({});
+
     try {
       const params = new URLSearchParams({
-        origem,
-        destino,
+        origem: origem.trim(),
+        destino: destino.trim(),
         criterio,
       });
       if (dataViagem) {
@@ -26,16 +73,21 @@ export default function App() {
       }
 
       const res = await fetch(`${API_BASE}/rotas?${params.toString()}`);
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
 
       if (!res.ok) {
-        setErro(data.mensagem || 'Erro ao consultar rotas.');
+        setErro(data?.mensagem || 'Não foi possível consultar as rotas solicitadas.');
         setResultado(null);
       } else {
         setResultado(data);
       }
-    } catch (err) {
-      setErro('Não foi possível conectar à API. Verifique se o servidor FastAPI está ativo em localhost:8000.');
+    } catch {
+      setErro('Não foi possível conectar à API. Verifique se o servidor FastAPI está em execução em localhost:8000.');
       setResultado(null);
     } finally {
       setCarregando(false);
@@ -43,62 +95,86 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <header style={{ marginBottom: '20px', borderBottom: '2px solid #319795', paddingBottom: '10px' }}>
-        <h1 style={{ margin: 0, fontSize: '1.4rem', color: '#234e52' }}>Embarque Amazônia</h1>
-        <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#718096' }}>
-          Hub Multimodal de Passageiros para a Amazônia Legal
+    <main className="app-container">
+      <header className="app-header">
+        <h1 className="app-title">Embarque Amazônia</h1>
+        <p className="app-subtitle">
+          Busca multimodal de rotas na Amazônia Legal
         </p>
       </header>
 
-      <form onSubmit={buscarRotas} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
+      <div className="aviso-ilustrativo" role="note">
+        Dados de exemplo ilustrativos. Preços e horários são estimativas.
+      </div>
+
+      <form onSubmit={buscarRotas} className="search-form">
+        <div className="field-group">
+          <label htmlFor="campo-origem" className="field-label">
             Origem
           </label>
           <input
+            id="campo-origem"
             type="text"
+            list="sugestoes-origem"
+            className="field-input"
             value={origem}
-            onChange={(e) => setOrigem(e.target.value)}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #cbd5e0' }}
+            onChange={(e) => handleOrigemChange(e.target.value)}
+            placeholder="Ex.: Belém"
+            autoComplete="off"
             required
           />
+          <datalist id="sugestoes-origem">
+            {sugestoesOrigem.map((loc) => (
+              <option key={loc.id} value={loc.nome} label={`${loc.nome} (${loc.uf})`} />
+            ))}
+          </datalist>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
+        <div className="field-group">
+          <label htmlFor="campo-destino" className="field-label">
             Destino
           </label>
           <input
+            id="campo-destino"
             type="text"
+            list="sugestoes-destino"
+            className="field-input"
             value={destino}
-            onChange={(e) => setDestino(e.target.value)}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #cbd5e0' }}
+            onChange={(e) => handleDestinoChange(e.target.value)}
+            placeholder="Ex.: Manaus"
+            autoComplete="off"
             required
           />
+          <datalist id="sugestoes-destino">
+            {sugestoesDestino.map((loc) => (
+              <option key={loc.id} value={loc.nome} label={`${loc.nome} (${loc.uf})`} />
+            ))}
+          </datalist>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
-              Data da Viagem
+        <div className="field-row">
+          <div className="field-group">
+            <label htmlFor="campo-data" className="field-label">
+              Data
             </label>
             <input
+              id="campo-data"
               type="date"
+              className="field-input"
               value={dataViagem}
               onChange={(e) => setDataViagem(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #cbd5e0' }}
             />
           </div>
 
-          <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
+          <div className="field-group">
+            <label htmlFor="campo-criterio" className="field-label">
               Critério
             </label>
             <select
+              id="campo-criterio"
+              className="field-input"
               value={criterio}
               onChange={(e) => setCriterio(e.target.value)}
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #cbd5e0' }}
             >
               <option value="menor_tempo">Menor tempo</option>
               <option value="menor_custo">Menor custo</option>
@@ -107,94 +183,136 @@ export default function App() {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={carregando}
-          style={{
-            backgroundColor: '#319795',
-            color: 'white',
-            border: 'none',
-            padding: '12px',
-            borderRadius: '6px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            marginTop: '8px'
-          }}
-        >
-          {carregando ? 'Buscando opções...' : 'Buscar Rotas'}
+        <button type="submit" disabled={carregando} className="submit-btn">
+          {carregando ? 'Buscando opções...' : 'Buscar rotas'}
         </button>
       </form>
 
+      {carregando && (
+        <div className="status-box status-loading" role="status">
+          Consultando rotas multimodais disponíveis...
+        </div>
+      )}
+
       {erro && (
-        <div style={{ marginTop: '20px', padding: '12px', background: '#fed7d7', color: '#9b2c2c', borderRadius: '6px', fontSize: '0.9rem' }}>
+        <div className="status-box status-error" role="alert">
           {erro}
         </div>
       )}
 
-      {resultado && (
-        <div style={{ marginTop: '24px' }}>
-          <h2 style={{ fontSize: '1.1rem', color: '#2d3748', marginBottom: '12px' }}>
-            Opções encontradas ({resultado.total_opcoes})
+      {!carregando && resultado && (
+        <section aria-live="polite">
+          <h2 className="results-title">
+            {resultado.origem} → {resultado.destino} ({resultado.total_opcoes}{' '}
+            {resultado.total_opcoes === 1 ? 'opção' : 'opções'})
           </h2>
 
           {resultado.rotas.length === 0 ? (
-            <p style={{ color: '#718096', fontSize: '0.9rem' }}>
+            <div className="status-box status-empty">
               Nenhuma rota encontrada para este itinerário na data selecionada.
-            </p>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {resultado.rotas.map((rota) => (
-                <div
-                  key={rota.id}
-                  style={{
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '14px',
-                    background: '#ffffff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 'bold', color: '#2b6cb0' }}>
-                      {rota.modais.join(' + ')}
-                    </span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#276749' }}>
-                      R$ {rota.preco_total.toFixed(2)}
-                    </span>
-                  </div>
+            <div className="cards-list">
+              {resultado.rotas.map((rota) => {
+                const aberta = Boolean(expandidas[rota.id]);
+                const duracaoExibida = formatarDuracao(rota.duracao_total_minutos);
+                const recenciaExibida = formatarRecencia(rota.dias_desde_atualizacao);
+                const dataIsoFormatada = formatarData(rota.data_atualizacao_iso);
 
-                  <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#4a5568' }}>
-                    <strong>Duração:</strong> {rota.duracao_total_formatada} • {rota.numero_trechos} trecho(s)
-                    {rota.numero_conexoes > 0 && ` (${rota.numero_conexoes} conexão)`}
-                  </div>
-
-                  <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {rota.selo.map((s, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          background: s === 'Menor tempo' ? '#e2e8f0' : s === 'Menor custo' ? '#c6f6d5' : '#bee3f8',
-                          color: '#2d3748',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {s}
+                return (
+                  <article key={rota.id} className="route-card">
+                    <div className="card-top">
+                      <div className="modais-wrap">
+                        {rota.modais.map((modalNome, idx) => (
+                          <span
+                            key={`${rota.id}-m-${idx}`}
+                            className="modal-badge"
+                            style={{ backgroundColor: corCategoriaModal(modalNome) }}
+                          >
+                            {modalNome}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="card-price">
+                        {formatarMoeda(rota.preco_total)}
                       </span>
-                    ))}
-                  </div>
+                    </div>
 
-                  <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#a0aec0' }}>
-                    {rota.atualizado_em}
-                  </div>
-                </div>
-              ))}
+                    <div className="card-meta">
+                      <strong>{duracaoExibida}</strong> • {rota.numero_trechos}{' '}
+                      {rota.numero_trechos === 1 ? 'trecho' : 'trechos'} •{' '}
+                      {formatarConexoes(rota.numero_conexoes)}
+                    </div>
+
+                    {Array.isArray(rota.selo) && rota.selo.length > 0 && (
+                      <div className="selos-wrap">
+                        {rota.selo.map((s, idx) => (
+                          <span
+                            key={`${rota.id}-s-${idx}`}
+                            className="selo-badge"
+                            style={estiloSelo(s)}
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="card-footer">
+                      <span className="recency-text">
+                        {recenciaExibida}
+                        {dataIsoFormatada ? ` (${dataIsoFormatada})` : ''}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="toggle-btn"
+                        aria-expanded={aberta}
+                        onClick={() => alternarTrechos(rota.id)}
+                      >
+                        {aberta
+                          ? 'Ocultar trechos'
+                          : `Ver trechos (${rota.trechos?.length ?? rota.numero_trechos})`}
+                      </button>
+                    </div>
+
+                    {aberta && Array.isArray(rota.trechos) && (
+                      <div className="trechos-list">
+                        {rota.trechos.map((tr, idx) => (
+                          <div
+                            key={`${rota.id}-tr-${tr.id}-${idx}`}
+                            className="trecho-item"
+                            style={{ borderLeftColor: corCategoriaModal(tr.modal_nome) }}
+                          >
+                            <div className="trecho-header">
+                              {idx + 1}. {tr.origem_nome} → {tr.destino_nome} ({tr.modal_nome})
+                            </div>
+                            <div className="trecho-detail">
+                              <strong>Operador:</strong> {tr.operador_nome}
+                            </div>
+                            <div className="trecho-detail">
+                              <strong>Terminais:</strong>{' '}
+                              {tr.terminal_origem_nome || 'Não informado'} →{' '}
+                              {tr.terminal_destino_nome || 'Não informado'}
+                            </div>
+                            <div className="trecho-detail">
+                              <strong>Duração:</strong> {formatarDuracao(tr.duracao_minutos)} •{' '}
+                              <strong>Tarifa:</strong> {formatarMoeda(tr.tarifa_reais)}
+                              {tr.data_ultima_atualizacao
+                                ? ` • Base: ${formatarData(tr.data_ultima_atualizacao)}`
+                                : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }
