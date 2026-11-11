@@ -16,9 +16,9 @@ info:
     email: cesar24070011@aluno.cesupa.br
 
 servers:
-  - url: http://127.0.0.1:4010/api/v1
+  - url: http://127.0.0.1:4010
     description: Mock Server Local (Prism CLI)
-  - url: http://localhost:8000/api/v1
+  - url: http://localhost:8000
     description: Servidor da API em Python / FastAPI
 
 tags:
@@ -30,7 +30,7 @@ tags:
     description: Endpoints para alimentação e manutenção da malha por operadores (Telas A01-A06)
 
 paths:
-  /localidades:
+  /api/v1/localidades:
     get:
       tags:
         - Passageiro - Localidades
@@ -86,15 +86,15 @@ paths:
                       uf: "PA"
                       e_polo_regional: false
 
-  /rotas:
+  /api/v1/rotas:
     get:
       tags:
         - Passageiro - Roteamento
       summary: Calcular e comparar rotas multimodais (P04 / P05)
       description: |
         Motor de roteamento que percorre o grafo multimodal entre origem e destino,
-        retornando opções viáveis ordenadas segundo o critério solicitado.
-        Os campos da resposta seguem estritamente a ordem do Card 7 do Trello:
+        retornando até 5 opções viáveis ordenadas segundo o critério solicitado.
+        Os campos da resposta seguem estritamente a ordem definida pelo projeto:
         modais, preco_total, duracao_total_minutos, numero_trechos, numero_conexoes, selo, atualizado_em.
       parameters:
         - name: origem
@@ -319,7 +319,7 @@ paths:
                 codigo: "BANCO_INDISPONIVEL"
                 mensagem: "Base de dados relacional indisponível ou não inicializada."
 
-  /rotas/{id}:
+  /api/v1/rotas/{id}:
     get:
       tags:
         - Passageiro - Roteamento
@@ -330,7 +330,7 @@ paths:
           required: true
           schema:
             type: string
-            example: "rota-1-2-3"
+            example: "rota-t3-t4"
       responses:
         '200':
           description: Detalhes da rota e seus trechos retornados com sucesso
@@ -339,7 +339,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OpcaoRota'
 
-  /trechos:
+  /api/v1/trechos:
     get:
       tags:
         - Administrador - Cadastro
@@ -378,7 +378,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrechoDetalhado'
 
-  /operadores:
+  /api/v1/operadores:
     post:
       tags:
         - Administrador - Cadastro
@@ -423,10 +423,10 @@ components:
           example: 1
         codigo:
           type: string
-          example: "barco_linha"
+          example: "barco_regional"
         nome:
           type: string
-          example: "Barco Regional"
+          example: "Barco regional"
         categoria:
           type: string
           enum: [fluvial, rodoviario, aereo]
@@ -462,7 +462,7 @@ components:
           example: "Manaus"
         modal_nome:
           type: string
-          example: "Barco Regional"
+          example: "Barco regional"
         operador_nome:
           type: string
           example: "Amazon Star"
@@ -489,7 +489,7 @@ components:
       properties:
         id:
           type: string
-          example: "rota-1-2-1"
+          example: "rota-t1"
         origem_nome:
           type: string
           example: "Belém"
@@ -500,7 +500,7 @@ components:
           type: array
           items:
             type: string
-          example: ["Barco Regional"]
+          example: ["Barco regional"]
         preco_total:
           type: number
           format: float
@@ -555,6 +555,7 @@ components:
           example: 3
         rotas:
           type: array
+          maxItems: 5
           items:
             $ref: '#/components/schemas/OpcaoRota'
 
