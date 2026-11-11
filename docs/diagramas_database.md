@@ -5,7 +5,7 @@
 
 ## 1. Diagrama Entidade-Relacionamento (ERD)
 
-Este diagrama reflete fielmente o arquivo [`schema.sql`](file:///D:/Users/Kzar/Documents/Faculdade/Projeto%20Integrado%20II/database/schema.sql) normalizado:
+Este diagrama reflete fielmente o arquivo [`schema.sql`](../database/schema.sql) normalizado (alinhado com SQLite 3 em desenvolvimento e migração prevista para PostgreSQL 15+):
 
 ```mermaid
 erDiagram
@@ -25,8 +25,10 @@ erDiagram
     LOCALIDADE {
         INTEGER id PK
         VARCHAR codigo_ibge
+        VARCHAR codigo_iata
         VARCHAR nome
         CHAR uf
+        VARCHAR tipo
         NUMERIC latitude
         NUMERIC longitude
         BOOLEAN e_polo_regional
@@ -78,6 +80,7 @@ erDiagram
         INTEGER duracao_estimada_minutos
         NUMERIC tarifa_base_reais
         INTEGER tempo_conexao_espera_minutos
+        VARCHAR sentido
         TEXT regime_hidrico_observacao
         NUMERIC fator_sazonal_opcional
         DATE data_ultima_atualizacao
@@ -99,6 +102,7 @@ erDiagram
         INTEGER id PK
         INTEGER trecho_id FK
         VARCHAR tipo
+        VARCHAR regime
         NUMERIC valor_total_reais
         TEXT descricao
     }
@@ -106,38 +110,43 @@ erDiagram
 
 ---
 
-## 2. Diagrama de Topologia do Grafo e Rotas Canônicas
+## 2. Diagrama de Topologia do Grafo (11 Trechos Ilustrativos do Seed)
 
-O arquivo [`seed.sql`](file:///D:/Users/Kzar/Documents/Faculdade/Projeto%20Integrado%20II/database/seed.sql) popula os nós e arestas que formam a malha de teste:
+O arquivo [`seed.sql`](../database/seed.sql) popula 7 localidades, 10 modais canônicos e 11 trechos direcionados (IDs 1–7 e voltas 9–12):
 
 ```mermaid
 graph LR
-    subgraph "Rota 1: Belém → Manaus"
-        BEL("Belém (PA)")
-        STM("Santarém (PA)")
-        MAO("Manaus (AM)")
+    subgraph "Rota 1: Belém ↔ Manaus (Ida e Volta)"
+        BEL("Belém (PA) [BEL]")
+        STM("Santarém (PA) [STM]")
+        MAO("Manaus (AM) [MAO]")
 
-        BEL -->|"Barco regional<br/>5d 20h | R$ 350<br/>(Opção A: Menor custo)"| MAO
-        BEL -->|"Avião regional<br/>2h 15min | R$ 780<br/>(Opção B: Menor tempo & Mais confiável)"| MAO
-        BEL -->|"Voo regional<br/>1h 20m | R$ 540<br/>Chegada: 09:20"| STM
-        STM -->|"Barco regional<br/>1d 18h | R$ 210<br/>Partida: 14:00"| MAO
+        BEL -->|"T1 Barco regional | 5d 20h | R$ 350<br/>(Menor custo)"| MAO
+        BEL -->|"T2 Avião regional | 2h 15min | R$ 780<br/>(Menor tempo & Mais confiável)"| MAO
+        BEL -->|"T3 Avião regional | 1h 20min | R$ 540<br/>Chegada: 09:20"| STM
+        STM -->|"T4 Barco regional | 1d 18h | R$ 210<br/>Partida: 14:00"| MAO
+
+        MAO -->|"T9 Volta Barco regional | 4d | R$ 350<br/>18:00 -> 18:00 (+96h)"| BEL
+        MAO -->|"T10 Volta Avião regional | 2h 15min | R$ 780"| BEL
     end
 
-    subgraph "Rota 2: Manaus → Tefé"
-        TEF("Tefé (AM)")
-        MAO -->|"Voadeira expressa<br/>11h | R$ 320<br/>(Menor tempo)"| TEF
-        MAO -->|"Barco regional<br/>1d 12h | R$ 190<br/>(Menor custo)"| TEF
+    subgraph "Rota 2: Manaus ↔ Tefé (Ida e Volta)"
+        TEF("Tefé (AM) [TFF]")
+        MAO -->|"T5 Voadeira | 11h | R$ 320 (Menor tempo)"| TEF
+        MAO -->|"T6 Barco regional | 1d 12h | R$ 190 (Menor custo)"| TEF
+        TEF -->|"T11 Volta Voadeira | 11h | R$ 320"| MAO
+        TEF -->|"T12 Volta Barco regional | 1d 12h | R$ 190"| MAO
     end
 
     subgraph "Rota 3: Caso de Borda (Sem Conexão)"
         CAM("Cametá (PA)")
         ALQ("Alenquer (PA)")
-        CAM -.->|"Sem arestas viáveis no grafo<br/>(Retorna HTTP 404 ErroPadrao)"| ALQ
+        CAM -.->|"Sem arestas viáveis no grafo<br/>(Retorna HTTP 200 com rotas: [])"| ALQ
     end
 
-    subgraph "Trecho de Teste de Desatualização"
-        PIN("Parintins (AM)")
-        PIN -->|"Barco regional<br/>Atualizado há 45 dias<br/>(Selo: Desatualizado)"| MAO
+    subgraph "Trecho de Teste de Desatualização (Opção Única)"
+        PIN("Parintins (AM) [PIN]")
+        PIN -->|"T7 Barco regional | 18h | R$ 120<br/>Atualizado há 45 dias (Selo: Desatualizado)"| MAO
     end
 
     style BEL fill:#1F6FB2,stroke:#333,stroke-width:2px,color:#fff
@@ -151,27 +160,28 @@ graph LR
 
 ---
 
-## 3. Diagrama do Fluxo de Inicialização e Consumo dos Dados
+## 3. Diagrama do Fluxo de Inicialização, Auditoria e Consumo
 
-Visualização de como [`init_db.py`](file:///D:/Users/Kzar/Documents/Faculdade/Projeto%20Integrado%20II/database/init_db.py) garante a integridade e alimenta a API e os testes:
+Visualização de como [`init_db.py`](../database/init_db.py) garante a recriação limpa com datas relativas e alimenta [`mostrar_dados.py`](../database/mostrar_dados.py), o motor e a API:
 
 ```mermaid
 flowchart TD
-    S["schema.sql<br/>(Tabelas e Índices)"] --> INIT["init_db.py<br/>(Carga Relativa Portável)"]
-    D["seed.sql<br/>(10 Modais Canônicos e Trechos)"] --> INIT
+    S["schema.sql<br/>(7 Tabelas e Índices)"] --> INIT["init_db.py<br/>(Apaga e recria embarque.db)"]
+    D["seed.sql<br/>(10 Modais, 7 Localidades, 11 Trechos)"] --> INIT
     INIT --> DB[("embarque.db<br/>(SQLite Local)")]
 
+    DB -->|"somente leitura"| SHOW["mostrar_dados.py<br/>(Inspeção de tabelas no terminal)"]
     DB -->|"carregar_do_banco()"| ENGINE["route_engine.py<br/>(Motor em Grafo)"]
-    ENGINE --> TESTS["test_route_engine.py<br/>(8 Testes Unitários)"]
+    ENGINE --> TESTS["test_route_engine.py<br/>(17 Testes Unitários)"]
     ENGINE --> API["main.py<br/>(FastAPI REST API)"]
-    API --> APITESTS["test_api.py<br/>(4 Testes de Integração)"]
+    API --> APITESTS["test_api.py<br/>(15 Testes de Integração)"]
     API --> SWAGGER["/docs<br/>(Swagger UI)"]
 
     style INIT fill:#1F6FB2,color:#fff
     style DB fill:#1B5E3F,color:#fff
+    style SHOW fill:#6A4C93,color:#fff
     style ENGINE fill:#00796B,color:#fff
     style API fill:#D9822B,color:#fff
     style TESTS fill:#2E7D32,color:#fff
     style APITESTS fill:#2E7D32,color:#fff
 ```
-
