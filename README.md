@@ -8,7 +8,7 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 
 ## 👥 Equipe do Projeto
 
-* **César Augusto Borges Ribeiro** — Coordenação geral, contrato OpenAPI, motor de rotas e artigo
+* **César Augusto Borges Ribeiro** — Coordenação geral, contrato OpenAPI, motor de rotas, API REST e artigo
 * **Fernando César Mourão Fonseca** — Modelagem relacional, banco SQL, área de cadastro e resumo
 * **Herbert Aciolly Leão de Jesus** — Design system, interface mobile do passageiro (P01–P04) e plano de testes
 * **Lucas Barros Mutran** — Interface de comparação/offline (P05–P10) e seções metodológicas do artigo
@@ -23,9 +23,9 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 │   ├── engine/
 │   │   └── route_engine.py       # Motor de cálculo em grafo multimodal (máx. 3 trechos e 5 opções)
 │   ├── tests/
-│   │   ├── test_route_engine.py  # 17 testes unitários do motor
-│   │   └── test_api.py           # 15 testes de integração HTTP com TestClient
-│   ├── main.py                   # Endpoints de consulta (/api/v1/localidades e /api/v1/rotas)
+│   │   ├── test_route_engine.py  # 21 testes unitários do motor (cálculo, conexões, offsets, imunidade)
+│   │   └── test_api.py           # 21 testes de integração HTTP com TestClient e validação de contrato
+│   ├── main.py                   # Endpoints de consulta (/localidades, /rotas e /rotas/{id})
 │   └── requirements.txt          # Dependências com versões fixadas
 ├── database/                     # Modelagem de dados e scripts SQL
 │   ├── schema.sql                # Esquema físico normalizado (SQLite local; PostgreSQL previsto)
@@ -35,29 +35,41 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 ├── docs/                         # Documentação formal e especificações do projeto
 │   ├── openapi.yaml              # Contrato OpenAPI 3.1 com exemplos canônicos (6 operações previstas)
 │   ├── artigo.md                 # Texto acadêmico (Seção 1, Referências e Declaração de IA)
+│   ├── contrato_telas_19-11.md   # Especificação e alinhamento do contrato da tela P06 e endpoints
 │   ├── decisoes.md               # Decisões de MVP, stack e roteiro de apresentação
 │   ├── diagramas_database.md     # Diagramas Mermaid (ERD, topologia do seed e fluxo de dados)
 │   ├── escopo_requisitos.md      # Escopo, glossário, dados de exemplo e kit de estilo
 │   ├── inventario_telas.md       # Inventário das 16 telas (prototipadas no Figma) e estado atual
 │   ├── telas_x_api.md            # Mapeamento de lacunas telas × API para a Semana 2
-│   └── verificacao_12-11.md      # Registro de execução verificada em clone limpo
-└── web/                          # Esqueleto web React + Vite (busca e listagem de resultados)
+│   ├── verificacao_12-11.md      # Registro de execução verificada em clone limpo (12/11)
+│   └── verificacao_19-11.md      # Registro de verificação ponta a ponta e auditoria da entrega (19/11)
+└── web/                          # Aplicação web React + Vite (busca, comparação e detalhe P06)
     ├── src/
-    │   ├── utils/format.js       # Formatação pt-BR, duração, conexões, recência e estilos de selos
-    │   ├── App.jsx               # Tela inicial com autocomplete, filtros e trechos expansíveis
-    │   ├── index.css             # Folha de estilos base com tokens do projeto
-    │   └── main.jsx              # Ponto de entrada React
-    ├── index.html                # HTML raiz e carregamento de fonte (Inter)
-    ├── package.json              # Dependências e scripts Vite/React
-    ├── package-lock.json         # Lockfile reproduzível (npm registry)
-    ├── vite.config.js            # Configuração do servidor local (localhost)
-    └── README.md                 # Instruções e notas específicas do front-end
+    │   ├── components/
+    │   │   └── TelaDetalheRota.jsx # Componente P06: detalhe da rota e linha do tempo vertical (360px)
+    │   ├── fixtures/
+    │   │   └── rota1_opcao_c.js    # Fixture canônica isolada para laboratório/demonstração offline
+    │   ├── utils/
+    │   │   ├── format.js           # Formatação pt-BR, duração, conexões, recência e estilos de selos
+    │   │   ├── timeline.js         # Montagem de eventos da linha do tempo e intervalos de conexão
+    │   │   ├── timeline.test.js    # Testes unitários do cálculo de timeline e conexões
+    │   │   └── imunidade.test.js   # Testes unitários de resiliência e desacoplamento
+    │   ├── App.jsx                 # Tela de busca e listagem com autocomplete e acionamento de detalhe
+    │   ├── Navegacao.jsx           # Roteador com hash (#/, #/rota/:id, #/lab/p06) e fallback resiliente
+    │   ├── index.css               # Folha de estilos base com tokens do projeto
+    │   ├── TelaDetalheRota.css     # Estilos da tela P06 (otimizado para 360px mobile)
+    │   └── main.jsx                # Ponto de entrada React (renderiza Navegacao)
+    ├── index.html                  # HTML raiz e carregamento de fonte (Inter)
+    ├── package.json                # Dependências, scripts Vite/React e runner de testes (node --test)
+    ├── package-lock.json           # Lockfile reproduzível (npm registry)
+    ├── vite.config.js              # Configuração do servidor local (localhost)
+    └── README.md                   # Instruções e notas específicas do front-end
 ```
 
 > [!NOTE]
 > **Estratégia de Banco:** SQLite em desenvolvimento local; PostgreSQL 15+ previsto para homologação. O arquivo binário local (`database/embarque.db`) é gerado dinamicamente por `python database/init_db.py` e mantido fora do Git via `.gitignore`.
 > **Natureza dos Dados:** Todos os horários, tarifas, operadores e rotas do `seed.sql` e dos exemplos são **dados ilustrativos** para validação do sistema.
-> **Cobertura do Contrato:** O contrato `docs/openapi.yaml` documenta 6 operações; o servidor FastAPI implementa atualmente as **2 operações de consulta do passageiro** (`GET /api/v1/localidades` e `GET /api/v1/rotas`). As rotas administrativas (`/api/v1/trechos`, `/api/v1/operadores`) e `/api/v1/rotas/{id}` estão previstas para a Semana 2.
+> **Cobertura do Contrato:** O contrato `docs/openapi.yaml` documenta 6 operações; o servidor FastAPI implementa atualmente as **3 operações de consulta do passageiro** (`GET /api/v1/localidades`, `GET /api/v1/rotas` e `GET /api/v1/rotas/{id}`). As operações administrativas (`/api/v1/trechos`, `/api/v1/operadores`) estão previstas para a Semana 2.
 
 ---
 
@@ -66,9 +78,16 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 O fluxo ponta a ponta conecta banco relacional local, motor de roteamento em memória, API REST e interface web sem dependência de caminhos absolutos de máquina:
 
 1. **Camada de Dados (`database/`):** `schema.sql` cria 7 tabelas normalizadas em SQLite (`localidade`, `modal`, `operador`, `operador_modal`, `trecho`, `horario_operacao` e `acomodacao`). `seed.sql` insere **7 localidades**, **10 modais** (`fluvial`, `rodoviario` e `aereo`), **4 operadores** e **11 trechos** (IDs canônicos `1–7` e retornos `9–12`) com máscara de dias da semana (`dias_semana_mask` em bits de segunda a domingo) e `data_ultima_atualizacao` calculada via `date('now', 'localtime', '-N days')`.
-2. **Motor de Roteamento (`api/engine/route_engine.py`):** `MotorRoteamentoMultimodal` resolve `embarque.db` por caminho relativo ao diretório da API e carrega os trechos ativos de forma idempotente em listas de adjacência em memória. Na busca por `origem` e `destino` (normalizados sem acentos), o motor filtra o primeiro horário ativo (`horario_operacao`) compatível com o dia da semana da `data` consultada e com a lista opcional de `modais`. A busca em profundidade (DFS) combina **1 a 3 trechos** sem revisitar localidades, exige conexões válidas no mesmo dia (`hora_partida >= hora_chegada` do trecho anterior, somando a espera à duração total), gera identificador determinístico pelos IDs dos trechos (ex.: `t1-t3-t4`), calcula os dias desde a atualização mais antiga em relação a `DATA_REFERENCIA` (ou `date.today()`), ordena pelo critério escolhido (`menor_tempo`, `menor_custo` ou `mais_confiavel`), limita o retorno a **até 5 opções** e atribui selos comparativos (apenas quando há **2 ou mais** opções) além do selo `Desatualizado` quando algum trecho supera **30 dias**.
-3. **API REST (`api/main.py`):** Inicializa o motor no evento `lifespan`, habilita CORS para o front-end local (`http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:3000` ou `CORS_ORIGINS`), normaliza erros de validação no schema `ErroPadrao` (`HTTP 422` para parâmetros ausentes/inválidos ou origem igual ao destino, `404` para localidade inexistente e `503` se `embarque.db` não tiver sido gerado) e expõe `GET /api/v1/localidades` (com `?busca=` sem acento) e `GET /api/v1/rotas`.
-4. **Cliente Web (`web/`):** Interface React + Vite em `http://localhost:5173` que consome `/api/v1/localidades` para autocomplete e `/api/v1/rotas` ao pesquisar rotas, exibindo duração, tarifas em pt-BR, contagem de conexões, selos, recência e detalhamento expansível de cada trecho. Por padrão comunica-se com `http://localhost:8000/api/v1`, podendo apontar para outro endpoint via `VITE_API_BASE_URL` em `web/.env`.
+2. **Motor de Roteamento (`api/engine/route_engine.py`):** `MotorRoteamentoMultimodal` resolve `embarque.db` por caminho relativo ao diretório da API e carrega os trechos ativos de forma idempotente em listas de adjacência em memória. Na busca por `origem` e `destino` (normalizados sem acentos), o motor filtra o primeiro horário ativo (`horario_operacao`) compatível com o dia da semana da `data` consultada e com a lista opcional de `modais`. A busca em profundidade (DFS) combina **1 a 3 trechos** sem revisitar localidades, exige conexões válidas no mesmo dia (`hora_partida >= hora_chegada` do trecho anterior, somando a espera à duração total), gera identificador determinístico pelos IDs dos trechos (ex.: `rota-t3-t4`), calcula os dias desde a atualização mais antiga em relação a `DATA_REFERENCIA` (ou `date.today()`), ordena pelo critério escolhido (`menor_tempo`, `menor_custo` ou `mais_confiavel`), limita o retorno a **até 5 opções** e atribui selos comparativos (apenas quando há **2 ou mais** opções) além do selo `Desatualizado` quando algum trecho supera **30 dias**. Para detalhamento individual, o método `obter_rota_por_ids` reconstrói diretamente a opção pelos IDs de trechos com consistência determinística, calculando horários de partida, chegada estimada com offset de dias (`+1 dia`, etc.), ISO timestamps, intervalos de conexão (`intervalo_conexao_minutos`), acomodações, telefone de contato do operador e espelhamento idêntico dos selos em relação à busca de rotas.
+3. **API REST (`api/main.py`):** Inicializa o motor no evento `lifespan`, habilita CORS para o front-end local (`http://localhost:5173`, `http://127.0.0.1:5173`, `http://localhost:3000` ou `CORS_ORIGINS`), normaliza erros de validação no schema `ErroPadrao` (`HTTP 422` para parâmetros ausentes/inválidos, regex de identificador de rota ou origem igual ao destino; `404` para localidade ou rota inexistente; `503` se `embarque.db` não tiver sido gerado) e expõe:
+   * `GET /api/v1/localidades` (com `?busca=` sem acento e autocomplete)
+   * `GET /api/v1/rotas` (busca de opções ordenadas com filtros de data, critério e modais)
+   * `GET /api/v1/rotas/{id}` (detalhe aprofundado com enriquecimento temporal, acomodações e conexões)
+4. **Cliente Web (`web/`):** Interface React + Vite em `http://localhost:5173` gerenciada por roteamento leve baseado em hash (`Navegacao.jsx`), permitindo navegação sem dependências externas complexas:
+   * `#/`: Busca e listagem de rotas (`App.jsx`) com autocomplete de localidades, filtros de modais/critérios, cartões com expansão e botão "Ver detalhes da rota".
+   * `#/rota/:id`: Tela P06 de detalhe da rota (`TelaDetalheRota.jsx`), consumindo a API em tempo real para exibir resumo comparativo, linha do tempo vertical sem sobreposição (otimizada para 360px), badges de intervalo de conexão (ex.: 280 min em Santarém), acomodações e telefones de operadores.
+   * `#/lab/p06`: Ambiente de demonstração e laboratório offline isolado, renderizando a tela P06 diretamente a partir da fixture canônica da Rota 1 Opção C (Belém → Manaus via Santarém).
+   * Fallback gracioso para rotas de telas não integradas (`#/filtros`, `#/comparar`, etc.).
 
 ---
 
@@ -130,20 +149,21 @@ python database/mostrar_dados.py
 ```
 
 ### 4. Executar a Suíte de Testes Automatizados
-O repositório possui **32 testes automatizados** no total (`17` unitários no motor e `15` de integração HTTP com `TestClient`):
+O repositório possui **50 testes automatizados** no total:
 
-* **Execução completa unificada (`unittest` ou `pytest`):**
-  ```bash
-  python -m unittest discover -s api/tests -v
-  ```
-  ou com `pytest`:
+* **42 testes em Python** (`21` unitários no motor e `21` de integração HTTP / contrato OpenAPI):
   ```bash
   pytest api/tests -v
   ```
-* **Ou por módulo individualmente:**
+  ou com `unittest`:
   ```bash
-  python api/tests/test_route_engine.py
-  python api/tests/test_api.py
+  python -m unittest discover -s api/tests -v
+  ```
+* **8 testes em Node.js** no front-end (`4` de cálculo de linha do tempo/conexões e `4` de resiliência/imunidade):
+  ```bash
+  cd web
+  npm test
+  cd ..
   ```
 
 > *Nota sobre dependência de teste:* O `TestClient` do FastAPI/Starlette pode emitir `StarletteDeprecationWarning` sobre `httpx` vs `httpx2` em ambiente Python 3.14, sem impacto na execução ou asserções dos testes.
@@ -160,6 +180,7 @@ Com o servidor ativo:
 * **Swagger UI Interativa:** `http://localhost:8000/docs`
 * **Esquema OpenAPI da API:** `http://localhost:8000/openapi.json`
 * **Busca de Rotas (Belém → Manaus, sexta 20/11/2026):** `http://localhost:8000/api/v1/rotas?origem=Belém&destino=Manaus&data=2026-11-20`
+* **Detalhe de Rota (Belém → Manaus via Santarém):** `http://localhost:8000/api/v1/rotas/rota-t3-t4?data=2026-11-20`
 * **Catálogo / Autocomplete de Localidades:** `http://localhost:8000/api/v1/localidades?busca=bele`
 
 ### 6. Executar o Front-End Web (React + Vite)
@@ -171,11 +192,16 @@ npm install
 npm run dev
 ```
 Acesse no navegador em host local: `http://localhost:5173`.
-* Para validar o bundle de produção (gera `web/dist/` ignorado no Git): `npm run build`.
-* Para apontar o front-end para outro endereço (como o Prism CLI na porta `4010`), crie `web/.env` com `VITE_API_BASE_URL=http://127.0.0.1:4010/api/v1` (padrão: `http://localhost:8000/api/v1`).
 
-> [!NOTE]
-> O diretório `web/` contém atualmente **apenas uma tela inicial de busca e listagem de resultados** (com autocomplete por localidade, seletor de data e critério, formatação em pt-BR, selos visuais, recência em dias e expansão dos trechos retornados pela API). Detalhes de auditoria de dependências (`npm audit`) constam em [`web/README.md`](web/README.md).
+Rotas disponíveis via hash navigation:
+* **Busca e Comparação:** `http://localhost:5173/#/`
+* **Detalhe da Rota em Tempo Real (P06 via API):** `http://localhost:5173/#/rota/rota-t3-t4?data=2026-11-20`
+* **Laboratório / Demonstração Offline (P06 via fixture canônica):** `http://localhost:5173/#/lab/p06`
+
+Comandos adicionais no front-end:
+* Executar testes unitários: `npm test`
+* Validar bundle de produção (gera `web/dist/` ignorado no Git): `npm run build`
+* Para apontar o front-end para outro endereço (como o Prism CLI na porta `4010`), crie `web/.env` com `VITE_API_BASE_URL=http://127.0.0.1:4010/api/v1` (padrão: `http://localhost:8000/api/v1`).
 
 ### 7. Opcional: Executar o Mock Server da API (Prism CLI)
 Para testar respostas simuladas diretamente a partir do contrato `docs/openapi.yaml` (sem precisar de Python/SQLite):
@@ -186,9 +212,10 @@ npx @stoplight/prism-cli mock docs/openapi.yaml --port 4010
 * **Localidades:** `http://127.0.0.1:4010/api/v1/localidades`
 * **Rota 1 (Belém → Manaus):** enviar cabeçalho HTTP `Prefer: example=rota_1_belem_manaus` em `http://127.0.0.1:4010/api/v1/rotas?origem=Belém&destino=Manaus`
 * **Rota 2 (Manaus → Tefé):** enviar cabeçalho HTTP `Prefer: example=rota_2_manaus_tefe` em `http://127.0.0.1:4010/api/v1/rotas?origem=Belém&destino=Manaus`
+* **Detalhe Rota 1 Opção C (Belém → Manaus via Santarém):** `http://127.0.0.1:4010/api/v1/rotas/rota-t3-t4`
 
 > [!WARNING]
-> **Mock Estático:** O servidor Prism devolve **exemplos estáticos** pré-definidos no contrato OpenAPI. Alterar parâmetros na query string (`origem`, `destino`, `criterio`, `data`) **não altera** a resposta retornada pelo mock. O roteamento dinâmico é executado apenas pelo servidor FastAPI + `route_engine.py`.
+> **Mock Estático:** O servidor Prism devolve **exemplos estáticos** pré-definidos no contrato OpenAPI. Alterar parâmetros na query string (`origem`, `destino`, `criterio`, `data`) **não altera** a resposta retornada pelo mock. O roteamento dinâmico e o detalhe com cálculo de datas são executados pelo servidor FastAPI + `route_engine.py`.
 
 ### Variáveis de Ambiente (Opcional)
 Consulte `.env.example` na raiz do repositório:
@@ -202,12 +229,14 @@ Consulte `.env.example` na raiz do repositório:
 
 ### Regras implementadas
 1. **Critérios de comparação:** `menor_tempo`, `menor_custo` e `mais_confiavel` (menor número de dias desde `data_ultima_atualizacao`), retornando **até 5 opções ordenadas**.
-2. **Selos visuais:** `Menor custo`, `Menor tempo` e `Mais confiável` são atribuídos apenas quando existem **2 ou mais opções** na resposta. O selo `Desatualizado` é aplicado sempre que algum trecho superar **30 dias** sem atualização (mesmo em opção única).
-3. **Validação temporal e erros:** Conexões onde a partida subsequente é anterior à chegada são descartadas. Parâmetros ausentes ou inválidos retornam HTTP `422` no schema `ErroPadrao` (`PARAMETRO_INVALIDO`); localidades inexistentes retornam `404` (`LOCALIDADE_NAO_ENCONTRADA`); ausência do banco retorna `503` (`BANCO_INDISPONIVEL`).
+2. **Selos visuais:** `Menor custo`, `Menor tempo` e `Mais confiável` são atribuídos apenas quando existem **2 ou mais opções** na resposta. O selo `Desatualizado` é aplicado sempre que algum trecho superar **30 dias** sem atualização (mesmo em opção única). Na consulta detalhada de uma rota específica (`/rotas/{id}`), os selos são calculados considerando todo o conjunto de opções viáveis para o mesmo par origem-destino, garantindo consistência com a busca.
+3. **Validação temporal e erros:** Conexões onde a partida subsequente é anterior à chegada são descartadas. Parâmetros ausentes ou inválidos retornam HTTP `422` no schema `ErroPadrao` (`PARAMETRO_INVALIDO`); localidades inexistentes e rotas não encontradas retornam `404` (`LOCALIDADE_NAO_ENCONTRADA` / `ROTA_NAO_ENCONTRADA`); ausência do banco retorna `503` (`BANCO_INDISPONIVEL`).
+4. **Enriquecimento do Detalhe da Rota:** Para a tela P06, cada trecho inclui horários formatados, chegada estimada com offset de dias (`+1 dia`), ISO timestamps, intervalos de conexão (`intervalo_conexao_minutos`), acomodações disponíveis (com tarifa e taxa de leito) e telefone de contato do operador.
 
-### Limitações conhecidas (MVP Semana 1)
-* O dia da semana da `data` consultada é verificado em **todos os trechos** da rota usando a mesma data de partida.
-* A conexão entre trechos é calculada apenas pela hora dentro do **mesmo dia** (`hora_partida - hora_chegada >= 0`), sem modelagem de pernoite/virada de dia em escala.
+### Limitações conhecidas (MVP Semana 2)
+* O dia da semana da `data` consultada é verificado em **todos os trechos** da rota usando a mesma data de partida de referência.
+* A conexão entre trechos é calculada pela diferença de horário no **mesmo dia** (`hora_partida - hora_chegada >= 0`), sem modelagem de pernoite/virada de dia em escala.
 * O motor lê apenas o **primeiro horário ativo** (`ORDER BY hora_partida ASC LIMIT 1`) de cada trecho em `horario_operacao`.
 * Não há conversão ou ajuste entre **fusos horários** (ex.: Belém em UTC-3 e Manaus em UTC-4).
-* Não há telas P01–P10 nem A01–A06 implementadas em `web/` (existem apenas no protótipo do Figma), nem suporte offline, CRUD administrativo ou autenticação de usuário implementados no código atual.
+* O campo `chegada_estimada_iso` omite o sufixo de fuso horário.
+* As telas complementares dos colegas de equipe (P01–P04, P05, P07–P10 e A01–A06) contam com fallback gracioso em `Navegacao.jsx` caso ainda não estejam integradas ao repositório principal.
