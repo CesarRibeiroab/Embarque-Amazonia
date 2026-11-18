@@ -10,7 +10,14 @@ import sys
 # Adicionar a pasta api/engine ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'engine')))
 
-from route_engine import MotorRoteamentoMultimodal, Localidade, Trecho, calcular_intervalo_conexao
+from route_engine import (
+    MotorRoteamentoMultimodal,
+    Localidade,
+    Trecho,
+    calcular_intervalo_conexao,
+    RotaNaoEncontradaException,
+    parse_hora_minutos
+)
 
 
 class TesteMotorRoteamentoCompleto(unittest.TestCase):
@@ -202,6 +209,147 @@ class TesteMotorRoteamentoCompleto(unittest.TestCase):
         por_tempo = motor_lim.calcular_rotas(1, 2, criterio="menor_tempo")
         self.assertEqual(len(por_tempo), 5)
         self.assertEqual([r.duracao_total_minutos for r in por_tempo], [350, 400, 450, 500, 550])
+
+    def test_18_horarios_e_offsets_secao_4_4(self):
+        rotas = self.motor.calcular_rotas(origem_id=1, destino_id=2, data_viagem="2026-11-20")
+
+        # Rota 1 Opção C (t3 Azul + t4 Amazon Star)
+        r_c = next(r for r in rotas if r.id == "rota-t3-t4")
+        self.assertEqual(r_c.duracao_total_minutos, 2880)
+        self.assertEqual(r_c.custo_total_reais, 750.00)
+        self.assertEqual(r_c.hora_partida, "08:00")
+        self.assertEqual(r_c.chegada_estimada, "08:00")
+        self.assertEqual(r_c.chegada_dia_offset, 2)
+        self.assertEqual(r_c.chegada_estimada_iso, "2026-11-22T08:00")
+
+        det_t3 = r_c.detalhes_trechos[0]
+        self.assertEqual(det_t3["trecho"].id, 3)
+        self.assertEqual(det_t3["hora_partida"], "08:00")
+        self.assertEqual(det_t3["hora_chegada_estimada"], "09:20")
+        self.assertEqual(det_t3["partida_dia_offset"], 0)
+        self.assertEqual(det_t3["chegada_dia_offset"], 0)
+        self.assertEqual(det_t3["intervalo_conexao_minutos"], 280)
+
+        det_t4 = r_c.detalhes_trechos[1]
+        self.assertEqual(det_t4["trecho"].id, 4)
+        self.assertEqual(det_t4["hora_partida"], "14:00")
+        self.assertEqual(det_t4["hora_chegada_estimada"], "08:00")
+        self.assertEqual(det_t4["partida_dia_offset"], 0)
+        self.assertEqual(det_t4["chegada_dia_offset"], 2)
+        self.assertIsNone(det_t4["intervalo_conexao_minutos"])
+
+        # Rota 1 Opção B (t2 Azul direto)
+        r_b = next(r for r in rotas if r.id == "rota-t2")
+        self.assertEqual(r_b.duracao_total_minutos, 135)
+        self.assertEqual(r_b.hora_partida, "09:30")
+        self.assertEqual(r_b.chegada_estimada, "11:45")
+        self.assertEqual(r_b.chegada_dia_offset, 0)
+        self.assertEqual(r_b.chegada_estimada_iso, "2026-11-20T11:45")
+
+        # Rota 1 Opção A (t1 Barco direto)
+        r_a = next(r for r in rotas if r.id == "rota-t1")
+        self.assertEqual(r_a.duracao_total_minutos, 8400)
+        self.assertEqual(r_a.hora_partida, "18:00")
+        self.assertEqual(r_a.chegada_estimada, "14:00")
+        self.assertEqual(r_a.chegada_dia_offset, 6)
+        self.assertEqual(r_a.chegada_estimada_iso, "2026-11-26T14:00")
+
+    def test_19_propriedade_consistencia_todas_opcoes_seed(self):
+        # Valida consistência aditiva e temporal em todas as opções do seed
+        loc_ids = list(self.motor.localidades.keys())
+        for orig in loc_ids:
+            for dest in loc_ids:
+                if orig == dest:
+                    continue
+                for dt in [None, "2026-11-20"]:
+                    rotas = self.motor.calcular_rotas(origem_id=orig, destino_id=dest, data_viagem=dt, max_opcoes=0)
+                    for r in rotas:
+                        soma_duracao = sum(t.duracao_minutos for t in r.trechos)
+                        soma_intervalos = sum(d["intervalo_conexao_minutos"] or 0 for d in r.detalhes_trechos)
+                        self.assertEqual(
+                            soma_duracao + soma_intervalos,
+                            r.duracao_total_minutos,
+                            f"Inconsistência de soma na rota {r.id}: {soma_duracao} + {soma_intervalos} != {r.duracao_total_minutos}"
+                        )
+                        if r.hora_partida is not None:
+                            p0_min = parse_hora_minutos(r.hora_partida)
+                            self.assertIsNotNone(p0_min)
+                            chegada_calc_min = p0_min + r.duracao_total_minutos
+                            calc_offset = chegada_calc_min // 1440
+                            calc_hora = f"{(chegada_calc_min % 1440) // 60:02d}:{(chegada_calc_min % 1440) % 60:02d}"
+                            self.assertEqual(r.chegada_dia_offset, calc_offset, f"Offset inconsistente na rota {r.id}")
+                            self.assertEqual(r.chegada_estimada, calc_hora, f"Hora inconsistente na rota {r.id}")
+
+    def test_20_obter_rota_por_ids_casos_sucesso_e_falha(self):
+        # Sucesso com data (Opção C)
+        r = self.motor.obter_rota_por_ids([3, 4], data_viagem="2026-11-20")
+        self.assertEqual(r.id, "rota-t3-t4")
+        self.assertEqual(r.chegada_estimada_iso, "2026-11-22T08:00")
+        self.assertEqual(r.custo_total_reais, 750.00)
+
+        # Sucesso sem data (Opção B)
+        r2 = self.motor.obter_rota_por_ids([2])
+        self.assertEqual(r2.id, "rota-t2")
+        self.assertIn("Menor tempo", r2.selos)
+        self.assertIn("Mais confiável", r2.selos)
+
+        # Falhas esperadas
+        # 1. Trechos não encadeados
+        with self.assertRaises(RotaNaoEncontradaException):
+            self.motor.obter_rota_por_ids([3, 1])
+
+        # 2. Trecho inexistente
+        with self.assertRaises(RotaNaoEncontradaException):
+            self.motor.obter_rota_por_ids([999])
+
+        # 3. Não opera no sábado
+        with self.assertRaises(RotaNaoEncontradaException):
+            self.motor.obter_rota_por_ids([3, 4], data_viagem="2026-11-21")
+
+        # 4. Formato de data inválido
+        with self.assertRaises(ValueError):
+            self.motor.obter_rota_por_ids([3, 4], data_viagem="20/11/2026")
+
+        # 5. Localidade repetida (ciclo)
+        with self.assertRaises(RotaNaoEncontradaException):
+            self.motor.obter_rota_por_ids([1, 9])  # 1->2 e 2->1
+
+        # 6. Mais de 3 trechos
+        with self.assertRaises(RotaNaoEncontradaException):
+            self.motor.obter_rota_por_ids([1, 2, 3, 4])
+
+    def test_21_trecho_sem_horario_em_memoria(self):
+        motor_mem = MotorRoteamentoMultimodal()
+        motor_mem.adicionar_localidade(Localidade(1, "Origem A", "PA"))
+        motor_mem.adicionar_localidade(Localidade(2, "Destino B", "AM"))
+        tr_sem_h = Trecho(
+            id=500,
+            origem_id=1,
+            destino_id=2,
+            operador_nome="Operador Livre",
+            modal_codigo="barco_regional",
+            modal_nome="Barco regional",
+            duracao_minutos=120,
+            tarifa_reais=80.0,
+            data_ultima_atualizacao="2026-11-01",
+            tem_horario=False
+        )
+        motor_mem.adicionar_trecho(tr_sem_h)
+
+        self.assertFalse(tr_sem_h.tem_horario)
+        self.assertIsNone(tr_sem_h.hora_partida)
+        self.assertIsNone(tr_sem_h.hora_chegada)
+
+        rotas = motor_mem.calcular_rotas(1, 2)
+        self.assertEqual(len(rotas), 1)
+        r = rotas[0]
+        self.assertIsNone(r.hora_partida)
+        self.assertIsNone(r.chegada_estimada)
+        self.assertIsNone(r.chegada_dia_offset)
+        self.assertIsNone(r.chegada_estimada_iso)
+        self.assertEqual(r.duracao_total_minutos, 120)
+        self.assertIsNone(r.detalhes_trechos[0]["hora_partida"])
+        self.assertIsNone(r.detalhes_trechos[0]["hora_chegada_estimada"])
 
 
 if __name__ == "__main__":
