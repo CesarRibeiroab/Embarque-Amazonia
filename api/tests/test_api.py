@@ -326,6 +326,53 @@ class TesteFastAPIEndpoints(unittest.TestCase):
             # Restaura estado com o banco oficial
             motor.carregar_do_banco(DB_PATH)
 
+    def test_21_validacao_contrato_openapi_rota_detalhe(self):
+        import yaml
+        openapi_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "docs", "openapi.yaml"))
+        self.assertTrue(os.path.exists(openapi_path), "docs/openapi.yaml deve existir")
+        with open(openapi_path, "r", encoding="utf-8") as f:
+            spec = yaml.safe_load(f)
+
+        opcao_schema = spec["components"]["schemas"]["OpcaoRota"]
+        propriedades_opcao = set(opcao_schema["properties"].keys())
+
+        trecho_schema = spec["components"]["schemas"]["TrechoItem"]
+        propriedades_trecho = set(trecho_schema["properties"].keys())
+
+        # Faz requisição real para o endpoint de detalhe
+        resp = self.client.get("/api/v1/rotas/rota-t3-t4?data=2026-11-20")
+        self.assertEqual(resp.status_code, 200)
+        json_rota = resp.json()
+
+        # Todas as chaves da resposta da rota devem pertencer às propriedades declaradas no schema
+        chaves_resposta = set(json_rota.keys())
+        self.assertTrue(
+            chaves_resposta.issubset(propriedades_opcao),
+            f"Chaves na resposta não documentadas em OpcaoRota: {chaves_resposta - propriedades_opcao}"
+        )
+
+        # Campos obrigatórios essenciais
+        for campo_obrigatorio in [
+            "id", "origem_nome", "destino_nome", "modais", "preco_total",
+            "duracao_total_minutos", "trechos", "hora_partida", "chegada_estimada",
+            "chegada_dia_offset"
+        ]:
+            self.assertIn(campo_obrigatorio, chaves_resposta)
+
+        # Todas as chaves de cada trecho devem pertencer às propriedades de TrechoItem
+        for t_json in json_rota["trechos"]:
+            chaves_trecho = set(t_json.keys())
+            self.assertTrue(
+                chaves_trecho.issubset(propriedades_trecho),
+                f"Chaves no trecho não documentadas em TrechoItem: {chaves_trecho - propriedades_trecho}"
+            )
+            for c_trecho in [
+                "id", "origem_nome", "destino_nome", "modal_nome", "modal_codigo",
+                "modal_categoria", "duracao_minutos", "tarifa_reais", "hora_partida",
+                "hora_chegada_estimada"
+            ]:
+                self.assertIn(c_trecho, chaves_trecho)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
