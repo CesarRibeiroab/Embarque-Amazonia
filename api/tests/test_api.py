@@ -174,6 +174,158 @@ class TesteFastAPIEndpoints(unittest.TestCase):
             self.assertEqual(r_rotas.status_code, 503)
             self.assertEqual(r_rotas.json()["codigo"], "BANCO_INDISPONIVEL")
 
+    def test_16_detalhe_rota_sete_casos_secao_4_5(self):
+        # 1. rota-t3-t4 -> 200
+        r1 = self.client.get("/api/v1/rotas/rota-t3-t4")
+        self.assertEqual(r1.status_code, 200)
+        d1 = r1.json()
+        self.assertEqual(d1["id"], "rota-t3-t4")
+        self.assertEqual(len(d1["trechos"]), 2)
+        self.assertEqual(d1["preco_total"], 750.0)
+
+        # 2. rota-t3-t1 -> 404 (trechos não se encadeiam)
+        r2 = self.client.get("/api/v1/rotas/rota-t3-t1")
+        self.assertEqual(r2.status_code, 404)
+        self.assertEqual(r2.json()["codigo"], "ROTA_NAO_ENCONTRADA")
+
+        # 3. rota-t999 -> 404 (trecho inexistente)
+        r3 = self.client.get("/api/v1/rotas/rota-t999")
+        self.assertEqual(r3.status_code, 404)
+        self.assertEqual(r3.json()["codigo"], "ROTA_NAO_ENCONTRADA")
+
+        # 4. rota-xyz -> 422 (id fora do padrão)
+        r4 = self.client.get("/api/v1/rotas/rota-xyz")
+        self.assertEqual(r4.status_code, 422)
+        self.assertEqual(r4.json()["codigo"], "PARAMETRO_INVALIDO")
+
+        # 5. rota-t3-t4?data=2026-11-21 (sábado) -> 404 (barco não sai sábado)
+        r5 = self.client.get("/api/v1/rotas/rota-t3-t4?data=2026-11-21")
+        self.assertEqual(r5.status_code, 404)
+        d5 = r5.json()
+        self.assertEqual(d5["codigo"], "ROTA_NAO_ENCONTRADA")
+        self.assertIn("A rota não opera na data informada.", d5["mensagem"])
+
+        # 6. rota-t3-t4?data=2026-11-20 -> 200 com chegada_estimada_iso
+        r6 = self.client.get("/api/v1/rotas/rota-t3-t4?data=2026-11-20")
+        self.assertEqual(r6.status_code, 200)
+        d6 = r6.json()
+        self.assertEqual(d6["chegada_dia_offset"], 2)
+        self.assertEqual(d6["chegada_estimada_iso"], "2026-11-22T08:00")
+        self.assertEqual(d6["trechos"][0]["intervalo_conexao_minutos"], 280)
+
+        # 7. rota-t3-t4?data=20/11/2026 -> 422 (data fora do padrão ISO)
+        r7 = self.client.get("/api/v1/rotas/rota-t3-t4?data=20/11/2026")
+        self.assertEqual(r7.status_code, 422)
+        self.assertEqual(r7.json()["codigo"], "PARAMETRO_INVALIDO")
+
+    def test_17_rotas_campos_novos_belem_manaus_2026_11_20(self):
+        resp = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&data=2026-11-20")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["total_opcoes"], 3)
+
+        # Localizar a Opção C
+        r_c = next(r for r in data["rotas"] if r["id"] == "rota-t3-t4")
+        self.assertEqual(r_c["data_viagem"], "2026-11-20")
+        self.assertEqual(r_c["hora_partida"], "08:00")
+        self.assertEqual(r_c["chegada_estimada"], "08:00")
+        self.assertEqual(r_c["chegada_dia_offset"], 2)
+        self.assertEqual(r_c["chegada_estimada_iso"], "2026-11-22T08:00")
+
+        # Validar campos de TrechoResponse
+        t3 = r_c["trechos"][0]
+        self.assertEqual(t3["modal_codigo"], "aviao_regional")
+        self.assertEqual(t3["modal_categoria"], "aereo")
+        self.assertEqual(t3["hora_partida"], "08:00")
+        self.assertEqual(t3["hora_chegada_estimada"], "09:20")
+        self.assertEqual(t3["partida_dia_offset"], 0)
+        self.assertEqual(t3["chegada_dia_offset"], 0)
+        self.assertEqual(t3["intervalo_conexao_minutos"], 280)
+        self.assertEqual(t3["frequencia_descricao"], "Diário")
+        self.assertEqual(t3["dias_semana_mask"], 127)
+
+        t4 = r_c["trechos"][1]
+        self.assertEqual(t4["modal_codigo"], "barco_regional")
+        self.assertEqual(t4["modal_categoria"], "fluvial")
+        self.assertEqual(t4["hora_partida"], "14:00")
+        self.assertEqual(t4["hora_chegada_estimada"], "08:00")
+        self.assertEqual(t4["partida_dia_offset"], 0)
+        self.assertEqual(t4["chegada_dia_offset"], 2)
+        self.assertIsNone(t4["intervalo_conexao_minutos"])
+        self.assertEqual(t4["frequencia_descricao"], "Terças, Quintas e Sextas-feiras")
+        self.assertEqual(t4["dias_semana_mask"], 26)
+        self.assertEqual(t4["acomodacoes"][0]["tipo"], "rede")
+
+    def test_18_selos_detalhe_iguais_a_busca(self):
+        # Na busca geral, rota-t2 tem 'Menor tempo' e 'Mais confiável'; rota-t3-t4 não tem selos comparativos
+        resp_lista = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus&data=2026-11-20")
+        self.assertEqual(resp_lista.status_code, 200)
+        selos_lista_t3_t4 = next(r["selo"] for r in resp_lista.json()["rotas"] if r["id"] == "rota-t3-t4")
+        selos_lista_t2 = next(r["selo"] for r in resp_lista.json()["rotas"] if r["id"] == "rota-t2")
+
+        resp_det_t3_t4 = self.client.get("/api/v1/rotas/rota-t3-t4?data=2026-11-20")
+        self.assertEqual(resp_det_t3_t4.status_code, 200)
+        self.assertEqual(resp_det_t3_t4.json()["selo"], selos_lista_t3_t4)
+
+        resp_det_t2 = self.client.get("/api/v1/rotas/rota-t2?data=2026-11-20")
+        self.assertEqual(resp_det_t2.status_code, 200)
+        self.assertEqual(resp_det_t2.json()["selo"], selos_lista_t2)
+
+    def test_19_banco_ausente_retorna_503_detalhe_rota(self):
+        caminho_falso = os.path.join(os.path.dirname(DB_PATH), "nao_existe_embarque.db")
+        with patch.object(main, "DB_PATH", caminho_falso):
+            r_det = self.client.get("/api/v1/rotas/rota-t3-t4")
+            self.assertEqual(r_det.status_code, 503)
+            self.assertEqual(r_det.json()["codigo"], "BANCO_INDISPONIVEL")
+
+    def test_20_a_prova_de_enriquecimento_do_seed(self):
+        import shutil
+        import sqlite3
+        import tempfile
+
+        # Cria cópia temporária do banco relacional
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_file:
+            temp_db_path = tmp_file.name
+
+        try:
+            shutil.copyfile(DB_PATH, temp_db_path)
+
+            # Aplica enriquecimento independente do Fernando (novo camarote + telefone)
+            con = sqlite3.connect(temp_db_path)
+            cur = con.cursor()
+            cur.execute("""
+                INSERT INTO acomodacao_trecho (trecho_id, tipo, regime, valor_total_reais, descricao)
+                VALUES (4, 'camarote_duplo', 'fixo', 850.00, 'Camarote privativo com ar condicionado')
+            """)
+            cur.execute("""
+                UPDATE operador
+                SET telefone_contato = '(91) 90000-0000'
+                WHERE id = (SELECT operador_id FROM trecho WHERE id = 4)
+            """)
+            con.commit()
+            con.close()
+
+            with patch.object(main, "DB_PATH", temp_db_path):
+                motor.carregar_do_banco(temp_db_path)
+                resp = self.client.get("/api/v1/rotas/rota-t3-t4?data=2026-11-20")
+                self.assertEqual(resp.status_code, 200)
+                data = resp.json()
+                t4 = data["trechos"][1]
+
+                # Prova 1: acomodações do trecho 4 agora possuem 2 itens
+                self.assertEqual(len(t4["acomodacoes"]), 2)
+                tipos = [a["tipo"] for a in t4["acomodacoes"]]
+                self.assertIn("rede", tipos)
+                self.assertIn("camarote_duplo", tipos)
+
+                # Prova 2: telefone de contato do operador vem preenchido
+                self.assertEqual(t4["telefone_contato"], "(91) 90000-0000")
+        finally:
+            if os.path.exists(temp_db_path):
+                os.remove(temp_db_path)
+            # Restaura estado com o banco oficial
+            motor.carregar_do_banco(DB_PATH)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
