@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import TelaDetalheTrecho from './components/TelaDetalheTrecho';
 import {
   corCategoriaModal,
   estiloSelo,
@@ -9,10 +8,12 @@ import {
   formatarMoeda,
   formatarRecencia,
 } from './utils/format';
+import useComparacao from './hooks/useComparacao';
+import BarraComparacao from './components/BarraComparacao';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-export default function App({ onAbrirRota }) {
+export default function App({ onAbrirRota, onComparar, filtrosExternos }) {
   const [origem, setOrigem] = useState('Belém');
   const [destino, setDestino] = useState('Manaus');
   const [dataViagem, setDataViagem] = useState('2026-11-20');
@@ -23,7 +24,18 @@ export default function App({ onAbrirRota }) {
   const [erro, setErro] = useState(null);
   const [resultado, setResultado] = useState(null);
   const [expandidas, setExpandidas] = useState({});
-  const [trechoDetalhado, setTrechoDetalhado] = useState(null);
+
+  const {
+    selecionadas,
+    alternarComparacao,
+    estaSelecionada,
+  } = useComparacao();
+
+  useEffect(() => {
+    if (filtrosExternos?.criterio) {
+      setCriterio(filtrosExternos.criterio);
+    }
+  }, [filtrosExternos]);
 
   const carregarSugestoes = async (termo, setter) => {
     try {
@@ -59,7 +71,7 @@ export default function App({ onAbrirRota }) {
   };
 
   const buscarRotas = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setCarregando(true);
     setErro(null);
     setExpandidas({});
@@ -96,16 +108,20 @@ export default function App({ onAbrirRota }) {
     }
   };
 
-  if (trechoDetalhado !== null) {
-    return (
-      <main className="app-container">
-        <TelaDetalheTrecho
-          trecho={trechoDetalhado === 'canonico' ? null : trechoDetalhado}
-          onVoltar={() => setTrechoDetalhado(null)}
-        />
-      </main>
-    );
-  }
+  // Filtragem no cliente por critérios de filtrosExternos se houver
+  const rotasFiltradas = (resultado?.rotas || []).filter((rota) => {
+    if (!filtrosExternos) return true;
+    if (filtrosExternos.precoMaximo != null && filtrosExternos.precoMaximo !== '') {
+      if (Number(rota.preco_total) > Number(filtrosExternos.precoMaximo)) {
+        return false;
+      }
+    }
+    if (Array.isArray(filtrosExternos.modais) && filtrosExternos.modais.length > 0) {
+      const atendeModal = rota.modais?.some((m) => filtrosExternos.modais.includes(m));
+      if (!atendeModal) return false;
+    }
+    return true;
+  });
 
   return (
     <main className="app-container">
@@ -116,14 +132,24 @@ export default function App({ onAbrirRota }) {
         </p>
       </header>
 
-      <div className="btn-demo-bar">
+      <div className="btn-demo-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <button
           type="button"
           className="btn-demo-p07"
-          onClick={() => setTrechoDetalhado('canonico')}
+          onClick={() => { window.location.hash = '#/filtros'; }}
+          title="Abrir Tela P03 de Critérios e Filtros Avançados"
+          style={{ background: '#E8F5E9', borderColor: '#2E7D32', color: '#1B5E20' }}
+        >
+          ⚙️ Critérios e Filtros (P03)
+        </button>
+
+        <button
+          type="button"
+          className="btn-demo-p07"
+          onClick={() => { window.location.hash = '#/trecho/4'; }}
           title="Abrir Tela P07 isolada com dados canônicos do Barco Santarém -> Manaus"
         >
-          🔍 Ver Detalhe do Trecho P07 (Demo Isolada)
+          🔍 Ver Detalhe do Trecho P07 (Demo)
         </button>
       </div>
 
@@ -227,17 +253,17 @@ export default function App({ onAbrirRota }) {
       {!carregando && resultado && (
         <section aria-live="polite">
           <h2 className="results-title">
-            {resultado.origem} → {resultado.destino} ({resultado.total_opcoes}{' '}
-            {resultado.total_opcoes === 1 ? 'opção' : 'opções'})
+            {resultado.origem} → {resultado.destino} ({rotasFiltradas.length}{' '}
+            {rotasFiltradas.length === 1 ? 'opção' : 'opções'})
           </h2>
 
-          {resultado.rotas.length === 0 ? (
+          {rotasFiltradas.length === 0 ? (
             <div className="status-box status-empty">
-              Nenhuma rota encontrada para este itinerário na data selecionada.
+              Nenhuma rota encontrada para este itinerário com os critérios selecionados.
             </div>
           ) : (
             <div className="cards-list">
-              {resultado.rotas.map((rota) => {
+              {rotasFiltradas.map((rota) => {
                 const aberta = Boolean(expandidas[rota.id]);
                 const duracaoExibida = formatarDuracao(rota.duracao_total_minutos);
                 const recenciaExibida = formatarRecencia(rota.dias_desde_atualizacao);
@@ -245,6 +271,18 @@ export default function App({ onAbrirRota }) {
 
                 return (
                   <article key={rota.id} className="route-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', fontWeight: 600, color: 'var(--cor-texto)' }}>
+                        <input
+                          type="checkbox"
+                          checked={estaSelecionada(rota.id)}
+                          disabled={selecionadas.length >= 3 && !estaSelecionada(rota.id)}
+                          onChange={() => alternarComparacao(rota)}
+                        />
+                        Comparar
+                      </label>
+                    </div>
+
                     <div className="card-top">
                       <div className="modais-wrap">
                         {rota.modais.map((modalNome, idx) => (
@@ -338,11 +376,11 @@ export default function App({ onAbrirRota }) {
                                 ? ` • Base: ${formatarData(tr.data_ultima_atualizacao)}`
                                 : ''}
                             </div>
-                            <div className="trecho-actions">
+                            <div className="trecho-actions" style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
                               <button
                                 type="button"
                                 className="btn-detalhe-trecho"
-                                onClick={() => setTrechoDetalhado(tr)}
+                                onClick={() => { window.location.hash = `#/trecho/${tr.id}`; }}
                                 title="Abrir Tela P07 com os dados deste trecho"
                               >
                                 🔍 Ver detalhes do trecho (P07)
@@ -358,6 +396,19 @@ export default function App({ onAbrirRota }) {
             </div>
           )}
         </section>
+      )}
+
+      {selecionadas.length > 0 && (
+        <BarraComparacao
+          selecionadas={selecionadas}
+          onComparar={(rotas) => {
+            if (onComparar) {
+              onComparar(rotas);
+            } else {
+              window.location.hash = '#/comparar';
+            }
+          }}
+        />
       )}
     </main>
   );
