@@ -2,7 +2,7 @@
 
 Este diretório contém uma **tela funcional inicial de busca e listagem de rotas** desenvolvida em React 18 com Vite para demonstrar o consumo da API REST (`GET /api/v1/localidades` e `GET /api/v1/rotas`).
 
-> **Escopo atual (Semana 1):** Apenas o fluxo de busca por origem/destino, data e critério com exibição de opções, selos, recência e trechos expansíveis está implementado aqui. As demais telas planejadas do sistema (P01–P10 e A01–A06) existem no momento apenas como protótipo de design no Figma (não implementadas em código e sem suporte offline/manifest/service worker).
+> **Escopo atual (Semana 2 — 19/11):** Estão integradas e funcionais as 4 novas telas do fluxo do passageiro: **P03** (Critérios e Filtros Avançados), **P04** (Busca e Listagem de Opções com seleção comparativa), **P05** (Comparador de até 3 Opções lado a lado), **P06** (Detalhe da Rota com linha do tempo vertical e cálculo de conexões) e **P07** (Detalhe do Trecho com acomodações Rede/Camarote, aviso sazonal de vazante e contato), coordenadas via Hash Router em `Navegacao.jsx`. As telas P08 (mapa interativo), P09 (offline com IndexedDB) e o painel administrativo (A01–A06) estão programados para a Semana 3 (26/11).
 
 ## Como executar localmente
 

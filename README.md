@@ -43,21 +43,30 @@ Desenvolvido no âmbito do **Projeto Integrado II** — Bacharelado em Ciência 
 │   ├── telas_x_api.md            # Mapeamento de lacunas telas × API para a Semana 2
 │   ├── verificacao_12-11.md      # Registro de execução verificada em clone limpo (12/11)
 │   └── verificacao_19-11.md      # Registro de verificação ponta a ponta e auditoria da entrega (19/11)
-└── web/                          # Aplicação web React + Vite (busca, comparação e detalhe P06)
+└── web/                          # Aplicação web React + Vite (busca, filtros, comparação e detalhes)
     ├── src/
     │   ├── components/
-    │   │   └── TelaDetalheRota.jsx # Componente P06: detalhe da rota e linha do tempo vertical (360px)
+    │   │   ├── TelaFiltros.jsx     # Componente P03: critérios, chips de 10 modais, preço e acomodações
+    │   │   ├── TelaFiltros.css     # Estilos da tela P03 (mobile first)
+    │   │   ├── BarraComparacao.jsx # Barra fixa inferior com botão dinâmico "Comparar (n)"
+    │   │   ├── SugestoesLocalidades.jsx # Tags e ícones por tipo de localidade (cidade, porto, aeroporto)
+    │   │   ├── TelaComparar.jsx    # Componente P05: tabela comparativa de até 3 rotas com destaque
+    │   │   ├── TelaComparar.css    # Estilos da tela P05 com rolagem horizontal em 360px
+    │   │   ├── TelaDetalheRota.jsx # Componente P06: detalhe da rota e linha do tempo vertical (360px)
+    │   │   ├── TelaDetalheRota.css # Estilos da tela P06 (otimizado para 360px mobile)
+    │   │   └── TelaDetalheTrecho.jsx # Componente P07: detalhe do trecho, rede/camarote, vazante e contato
     │   ├── fixtures/
     │   │   └── rota1_opcao_c.js    # Fixture canônica isolada para laboratório/demonstração offline
+    │   ├── hooks/
+    │   │   └── useComparacao.js    # Hook desacoplado de seleção e limite de comparação (2 a 3 rotas)
     │   ├── utils/
-    │   │   ├── format.js           # Formatação pt-BR, duração, conexões, recência e estilos de selos
+    │   │   ├── format.js           # Formatação pt-BR, duração, conexões, recência, dias da semana e selos
     │   │   ├── timeline.js         # Montagem de eventos da linha do tempo e intervalos de conexão
     │   │   ├── timeline.test.js    # Testes unitários do cálculo de timeline e conexões
     │   │   └── imunidade.test.js   # Testes unitários de resiliência e desacoplamento
-    │   ├── App.jsx                 # Tela de busca e listagem com autocomplete e acionamento de detalhe
-    │   ├── Navegacao.jsx           # Roteador com hash (#/, #/rota/:id, #/lab/p06) e fallback resiliente
+    │   ├── App.jsx                 # Tela P04 (busca multimodal, filtros integrados, seleção e deep links)
+    │   ├── Navegacao.jsx           # Roteador Hash Router (#/, #/filtros, #/comparar, #/rota/:id, #/trecho/:id, #/lab/p06)
     │   ├── index.css               # Folha de estilos base com tokens do projeto
-    │   ├── TelaDetalheRota.css     # Estilos da tela P06 (otimizado para 360px mobile)
     │   └── main.jsx                # Ponto de entrada React (renderiza Navegacao)
     ├── index.html                  # HTML raiz e carregamento de fonte (Inter)
     ├── package.json                # Dependências, scripts Vite/React e runner de testes (node --test)
@@ -149,9 +158,9 @@ python database/mostrar_dados.py
 ```
 
 ### 4. Executar a Suíte de Testes Automatizados
-O repositório possui **50 testes automatizados** no total:
+O repositório possui **51 testes automatizados** no total:
 
-* **42 testes em Python** (`21` unitários no motor e `21` de integração HTTP / contrato OpenAPI):
+* **43 testes em Python** (`21` unitários no motor e `22` de integração HTTP / contrato OpenAPI):
   ```bash
   pytest api/tests -v
   ```
@@ -194,9 +203,21 @@ npm run dev
 Acesse no navegador em host local: `http://localhost:5173`.
 
 Rotas disponíveis via hash navigation:
-* **Busca e Comparação:** `http://localhost:5173/#/`
+* **Busca e Listagem de Rotas (P04):** `http://localhost:5173/#/`
+* **Critérios e Filtros Avançados (P03):** `http://localhost:5173/#/filtros`
+* **Comparação Lado a Lado (P05):** `http://localhost:5173/#/comparar`
 * **Detalhe da Rota em Tempo Real (P06 via API):** `http://localhost:5173/#/rota/rota-t3-t4?data=2026-11-20`
+* **Detalhe do Trecho Enriquecido (P07 via API/canônico):** `http://localhost:5173/#/trecho/4`
 * **Laboratório / Demonstração Offline (P06 via fixture canônica):** `http://localhost:5173/#/lab/p06`
+
+#### 🎬 Roteiro de Demonstração (Semana 2 — 19/11)
+Para validar o fluxo ponta a ponta integrando as 4 novas telas:
+1. Acesse `http://localhost:5173/#/` e consulte **Belém → Manaus** para **20/11/2026**.
+2. Clique no botão **⚙️ Critérios e Filtros (P03)** para abrir a tela de filtros avançados por modais, teto de preço e acomodações.
+3. Na listagem de resultados, marque as 3 opções no checkbox **"Comparar"** e clique na barra fixa inferior **"Comparar (3)"** para abrir a **Tela P05**.
+4. Na tabela comparativa, visualize os modais, preços, tempos e destaques visuais dos melhores valores. Clique em **"Ver detalhes"** na Opção C.
+5. Na **Tela P06**, inspecione a linha do tempo vertical com a conexão de **4 h 40 min em Santarém** e a chegada prevista em **22/11/2026 às 08:00 (+2 dias)**.
+6. Clique no trecho fluvial (Santarém → Manaus) para abrir a **Tela P07** e conferir as tarifas por acomodação (Rede R$ 210 e Camarote R$ 900), o aviso sazonal dos rios sobre a estiagem/vazante e o contato ilustrativo do operador.
 
 Comandos adicionais no front-end:
 * Executar testes unitários: `npm test`
@@ -239,4 +260,4 @@ Consulte `.env.example` na raiz do repositório:
 * O motor lê apenas o **primeiro horário ativo** (`ORDER BY hora_partida ASC LIMIT 1`) de cada trecho em `horario_operacao`.
 * Não há conversão ou ajuste entre **fusos horários** (ex.: Belém em UTC-3 e Manaus em UTC-4).
 * O campo `chegada_estimada_iso` omite o sufixo de fuso horário.
-* As telas complementares dos colegas de equipe (P01–P04, P05, P07–P10 e A01–A06) contam com fallback gracioso em `Navegacao.jsx` caso ainda não estejam integradas ao repositório principal.
+* As **4 telas do passageiro do marco de 19/11 (P03, P04, P05, P06 e P07) estão 100% integradas** e funcionais. As funcionalidades complementares de mapa interativo (P08), modo offline completo via IndexedDB (P09) e o painel administrativo de cadastro (A01–A06) estão programadas para a Semana 3 (26/11).
