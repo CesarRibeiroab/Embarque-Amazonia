@@ -12,7 +12,7 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-export default function App() {
+export default function App({ onAbrirRota }) {
   const [origem, setOrigem] = useState('Belém');
   const [destino, setDestino] = useState('Manaus');
   const [dataViagem, setDataViagem] = useState('2026-11-20');
@@ -288,16 +288,28 @@ export default function App() {
                         {dataIsoFormatada ? ` (${dataIsoFormatada})` : ''}
                       </span>
 
-                      <button
-                        type="button"
-                        className="toggle-btn"
-                        aria-expanded={aberta}
-                        onClick={() => alternarTrechos(rota.id)}
-                      >
-                        {aberta
-                          ? 'Ocultar trechos'
-                          : `Ver trechos (${rota.trechos?.length ?? rota.numero_trechos})`}
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {onAbrirRota && (
+                          <button
+                            type="button"
+                            className="toggle-btn"
+                            style={{ backgroundColor: 'var(--cor-primaria)', color: '#FFFFFF', borderColor: 'var(--cor-primaria)' }}
+                            onClick={() => onAbrirRota(rota, dataViagem)}
+                          >
+                            Ver detalhes da rota
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="toggle-btn"
+                          aria-expanded={aberta}
+                          onClick={() => alternarTrechos(rota.id)}
+                        >
+                          {aberta
+                            ? 'Ocultar trechos'
+                            : `Ver trechos (${rota.trechos?.length ?? rota.numero_trechos})`}
+                        </button>
+                      </div>
                     </div>
 
                     {aberta && Array.isArray(rota.trechos) && (

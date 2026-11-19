@@ -3,26 +3,28 @@ Embarque Amazônia — Implementação da API REST (FastAPI)
 Localizado em: api/main.py
 
 Implementa os endpoints essenciais com suporte aos filtros de critérios, modais e data,
+consulta direta de rotas por ID determinístico (/api/v1/rotas/{id}),
 além de padronizar respostas de erro de acordo com ErroPadrao do openapi.yaml.
 """
 
 from contextlib import asynccontextmanager
 from datetime import datetime
 import os
+import re
 import sys
 import unicodedata
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Request, status, Query
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Adiciona o diretório api ao path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from engine.route_engine import MotorRoteamentoMultimodal
+from engine.route_engine import MotorRoteamentoMultimodal, RotaNaoEncontradaException, OpcaoRota
 
 
 def normalizar_texto(texto: Optional[str]) -> str:
@@ -74,22 +76,6 @@ class LocalidadeResponse(BaseModel):
     nome: str
     uf: str
     e_polo_regional: bool
-    tipo: Optional[str] = "municipio"
-    codigo_iata: Optional[str] = None
-
-
-class AcomodacaoResponse(BaseModel):
-    tipo: str
-    regime: str
-    valor_total_reais: float
-    descricao: Optional[str] = ""
-
-
-class HorarioOperacaoResponse(BaseModel):
-    hora_partida: str
-    hora_chegada_estimada: Optional[str] = ""
-    dias_semana_mask: int
-    frequencia_descricao: Optional[str] = ""
 
 
 class TrechoResponse(BaseModel):
@@ -97,21 +83,24 @@ class TrechoResponse(BaseModel):
     origem_nome: str
     destino_nome: str
     modal_nome: str
-    modal_codigo: Optional[str] = None
+    modal_codigo: str = ""
+    modal_categoria: str = ""
     operador_nome: str
-    operador_telefone: Optional[str] = None
-    terminal_origem_nome: str
-    terminal_destino_nome: str
+    terminal_origem_nome: str = ""
+    terminal_destino_nome: str = ""
     duracao_minutos: int
     tarifa_reais: float
     data_ultima_atualizacao: str
     hora_partida: Optional[str] = None
     hora_chegada_estimada: Optional[str] = None
-    dias_semana_mask: Optional[int] = 127
+    partida_dia_offset: Optional[int] = None
+    chegada_dia_offset: Optional[int] = None
     frequencia_descricao: Optional[str] = None
-    observacao_regime: Optional[str] = None
-    acomodacoes: List[AcomodacaoResponse] = []
-    horarios: List[HorarioOperacaoResponse] = []
+    dias_semana_mask: int = 127
+    acomodacoes: List[Dict[str, Any]] = Field(default_factory=list)
+    regime_hidrico_observacao: Optional[str] = None
+    telefone_contato: Optional[str] = None
+    intervalo_conexao_minutos: Optional[int] = None
 
 
 class OpcaoRotaResponse(BaseModel):
@@ -124,11 +113,16 @@ class OpcaoRotaResponse(BaseModel):
     duracao_total_formatada: str
     numero_trechos: int
     numero_conexoes: int
-    selo: List[str]
-    atualizado_em: str
-    data_atualizacao_iso: str
-    dias_desde_atualizacao: int
-    trechos: List[TrechoResponse]
+    selo: List[str] = Field(default_factory=list)
+    atualizado_em: str = ""
+    data_atualizacao_iso: str = ""
+    dias_desde_atualizacao: int = 0
+    data_viagem: Optional[str] = None
+    hora_partida: Optional[str] = None
+    chegada_estimada: Optional[str] = None
+    chegada_dia_offset: Optional[int] = None
+    chegada_estimada_iso: Optional[str] = None
+    trechos: List[TrechoResponse] = Field(default_factory=list)
 
 
 class ConsultaRotasResponse(BaseModel):
@@ -142,6 +136,66 @@ class ConsultaRotasResponse(BaseModel):
 class ErroPadraoResponse(BaseModel):
     codigo: str
     mensagem: str
+
+
+def serializar_opcao_rota(opcao: OpcaoRota, motor_inst: MotorRoteamentoMultimodal) -> OpcaoRotaResponse:
+    """Função única de serialização de OpcaoRota para OpcaoRotaResponse."""
+    trechos_resp: List[TrechoResponse] = []
+    detalhes = opcao.detalhes_trechos if opcao.detalhes_trechos else [{"trecho": t} for t in opcao.trechos]
+
+    for i, det in enumerate(detalhes):
+        t = det.get("trecho") or opcao.trechos[i]
+        orig_nome = motor_inst.localidades[t.origem_id].nome if t.origem_id in motor_inst.localidades else str(t.origem_id)
+        dest_nome = motor_inst.localidades[t.destino_id].nome if t.destino_id in motor_inst.localidades else str(t.destino_id)
+
+        trechos_resp.append(TrechoResponse(
+            id=t.id,
+            origem_nome=orig_nome,
+            destino_nome=dest_nome,
+            modal_nome=t.modal_nome,
+            modal_codigo=t.modal_codigo,
+            modal_categoria=t.modal_categoria,
+            operador_nome=t.operador_nome,
+            terminal_origem_nome=t.terminal_origem,
+            terminal_destino_nome=t.terminal_destino,
+            duracao_minutos=t.duracao_minutos,
+            tarifa_reais=t.tarifa_reais,
+            data_ultima_atualizacao=t.data_ultima_atualizacao,
+            hora_partida=det.get("hora_partida"),
+            hora_chegada_estimada=det.get("hora_chegada_estimada"),
+            partida_dia_offset=det.get("partida_dia_offset"),
+            chegada_dia_offset=det.get("chegada_dia_offset"),
+            frequencia_descricao=t.frequencia_descricao,
+            dias_semana_mask=t.dias_semana_mask,
+            acomodacoes=t.acomodacoes or [],
+            regime_hidrico_observacao=t.regime_hidrico_observacao,
+            telefone_contato=t.telefone_contato,
+            intervalo_conexao_minutos=det.get("intervalo_conexao_minutos")
+        ))
+
+    modais_list = list(dict.fromkeys(t.modal_nome for t in opcao.trechos))
+
+    return OpcaoRotaResponse(
+        id=opcao.id,
+        origem_nome=opcao.origem_nome,
+        destino_nome=opcao.destino_nome,
+        modais=modais_list,
+        preco_total=opcao.custo_total_reais,
+        duracao_total_minutos=opcao.duracao_total_minutos,
+        duracao_total_formatada=opcao.duracao_formatada,
+        numero_trechos=len(opcao.trechos),
+        numero_conexoes=opcao.numero_transbordos,
+        selo=opcao.selos,
+        atualizado_em=opcao.texto_recencia,
+        data_atualizacao_iso=opcao.data_atualizacao_iso,
+        dias_desde_atualizacao=opcao.dias_max_desatualizacao,
+        data_viagem=opcao.data_viagem,
+        hora_partida=opcao.hora_partida,
+        chegada_estimada=opcao.chegada_estimada,
+        chegada_dia_offset=opcao.chegada_dia_offset,
+        chegada_estimada_iso=opcao.chegada_estimada_iso,
+        trechos=trechos_resp
+    )
 
 
 @app.exception_handler(RequestValidationError)
@@ -182,19 +236,11 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
     res = []
     termo_busca = normalizar_texto(busca) if busca else None
     for loc in motor.localidades.values():
-        item = LocalidadeResponse(
-            id=loc.id,
-            nome=loc.nome,
-            uf=loc.uf,
-            e_polo_regional=loc.polo_regional,
-            tipo=getattr(loc, 'tipo', 'municipio'),
-            codigo_iata=getattr(loc, 'codigo_iata', None)
-        )
         if termo_busca:
             if termo_busca in normalizar_texto(loc.nome):
-                res.append(item)
+                res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
         else:
-            res.append(item)
+            res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
     return res
 
 
@@ -301,50 +347,7 @@ def buscar_rotas(
             rotas=[]
         )
 
-    # Mapear para a estrutura do contrato OpenAPI
-    rotas_resp = []
-    for r in rotas_calculadas:
-        modais_list = list(dict.fromkeys(t.modal_nome for t in r.trechos))
-        trechos_resp = [
-            TrechoResponse(
-                id=t.id,
-                origem_nome=motor.localidades[t.origem_id].nome,
-                destino_nome=motor.localidades[t.destino_id].nome,
-                modal_nome=t.modal_nome,
-                modal_codigo=t.modal_codigo,
-                operador_nome=t.operador_nome,
-                operador_telefone=getattr(t, "operador_telefone", None) or "(91) 90000-0000",
-                terminal_origem_nome=t.terminal_origem,
-                terminal_destino_nome=t.terminal_destino,
-                duracao_minutos=t.duracao_minutos,
-                tarifa_reais=t.tarifa_reais,
-                data_ultima_atualizacao=t.data_ultima_atualizacao,
-                hora_partida=t.hora_partida,
-                hora_chegada_estimada=t.hora_chegada,
-                dias_semana_mask=t.dias_semana_mask,
-                frequencia_descricao=getattr(t, "frequencia_descricao", ""),
-                observacao_regime=t.observacao_regime,
-                acomodacoes=[AcomodacaoResponse(**ac) for ac in getattr(t, "acomodacoes", [])],
-                horarios=[HorarioOperacaoResponse(**h) for h in getattr(t, "horarios", [])]
-            ) for t in r.trechos
-        ]
-
-        rotas_resp.append(OpcaoRotaResponse(
-            id=r.id,
-            origem_nome=r.origem_nome,
-            destino_nome=r.destino_nome,
-            modais=modais_list,
-            preco_total=r.custo_total_reais,
-            duracao_total_minutos=r.duracao_total_minutos,
-            duracao_total_formatada=r.duracao_formatada,
-            numero_trechos=len(r.trechos),
-            numero_conexoes=r.numero_transbordos,
-            selo=r.selos,
-            atualizado_em=r.texto_recencia,
-            data_atualizacao_iso=r.data_atualizacao_iso,
-            dias_desde_atualizacao=r.dias_max_desatualizacao,
-            trechos=trechos_resp
-        ))
+    rotas_resp = [serializar_opcao_rota(r, motor) for r in rotas_calculadas]
 
     return ConsultaRotasResponse(
         origem=origem,
@@ -353,3 +356,84 @@ def buscar_rotas(
         total_opcoes=len(rotas_resp),
         rotas=rotas_resp
     )
+
+
+PADRAO_ID_ROTA = re.compile(r"^rota-t\d+(-t\d+)*$")
+
+
+@app.get(
+    "/api/v1/rotas/{id}",
+    response_model=OpcaoRotaResponse,
+    responses={
+        404: {"model": ErroPadraoResponse},
+        422: {"model": ErroPadraoResponse},
+        503: {"model": ErroPadraoResponse}
+    },
+    tags=["Passageiro - Roteamento"]
+)
+def obter_detalhe_rota(
+    id: str,
+    data: Optional[str] = Query(None, description="Data pretendida da viagem no formato ISO (YYYY-MM-DD)")
+):
+    """
+    Recupera os detalhes completos de uma rota específica a partir de seu ID determinístico.
+    Retorna a linha do tempo discriminando paradas, horários acumulados, tempos de conexão e dados cadastrais.
+    """
+    if not os.path.exists(DB_PATH):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "codigo": "BANCO_INDISPONIVEL",
+                "mensagem": "Base de dados relacional indisponível ou não inicializada. Execute python database/init_db.py."
+            }
+        )
+
+    if not motor.localidades:
+        motor.carregar_do_banco(DB_PATH)
+
+    # 1. Validação do formato do ID
+    if not id or not PADRAO_ID_ROTA.match(id):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "codigo": "PARAMETRO_INVALIDO",
+                "mensagem": f"ID de rota '{id}' inválido. Formato esperado: rota-t{{id}} (ex: rota-t3-t4)."
+            }
+        )
+
+    # 2. Validação da data ISO
+    if data:
+        try:
+            datetime.strptime(data.strip(), "%Y-%m-%d")
+        except ValueError:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "codigo": "PARAMETRO_INVALIDO",
+                    "mensagem": f"Formato de data '{data}' inválido. Utilize o padrão ISO YYYY-MM-DD (ex: 2026-11-20)."
+                }
+            )
+
+    # 3. Extração dos IDs numéricos dos trechos
+    trecho_ids = [int(num) for num in re.findall(r"\d+", id)]
+
+    try:
+        rota_opcao = motor.obter_rota_por_ids(trecho_ids, data_viagem=data)
+    except RotaNaoEncontradaException as e:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "codigo": "ROTA_NAO_ENCONTRADA",
+                "mensagem": str(e.mensagem)
+            }
+        )
+    except ValueError as ve:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "codigo": "PARAMETRO_INVALIDO",
+                "mensagem": str(ve)
+            }
+        )
+
+    return serializar_opcao_rota(rota_opcao, motor)

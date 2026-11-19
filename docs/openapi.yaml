@@ -324,13 +324,26 @@ paths:
       tags:
         - Passageiro - Roteamento
       summary: Obter detalhe de uma rota (P06 / P07)
+      description: |
+        Recupera os detalhes completos de uma rota calculada a partir de seu ID determinístico (ex: rota-t3-t4).
+        Permite informar a data pretendida para cálculo do dia e horário previsto de chegada.
       parameters:
         - name: id
           in: path
           required: true
+          description: Identificador determinístico da rota (padrão rota-t{id})
           schema:
             type: string
+            pattern: '^rota-t\d+(-t\d+){0,2}$'
             example: "rota-t3-t4"
+        - name: data
+          in: query
+          required: false
+          description: Data pretendida da viagem no formato ISO (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2026-11-20"
       responses:
         '200':
           description: Detalhes da rota e seus trechos retornados com sucesso
@@ -338,6 +351,103 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OpcaoRota'
+              examples:
+                rota_1_opcao_c_detalhe:
+                  summary: Detalhe da Rota 1 Opção C (Belém -> Manaus via Santarém)
+                  value:
+                    id: "rota-t3-t4"
+                    origem_nome: "Belém"
+                    destino_nome: "Manaus"
+                    modais: ["Avião regional", "Barco regional"]
+                    preco_total: 750.0
+                    duracao_total_minutos: 2880
+                    duracao_total_formatada: "2 d"
+                    numero_trechos: 2
+                    numero_conexoes: 1
+                    selo: []
+                    dias_desde_atualizacao: 12
+                    data_atualizacao_iso: "2026-10-30"
+                    data_viagem: "2026-11-20"
+                    hora_partida: "08:00"
+                    chegada_estimada: "08:00"
+                    chegada_dia_offset: 2
+                    chegada_estimada_iso: "2026-11-22T08:00"
+                    trechos:
+                      - id: 3
+                        origem_nome: "Belém"
+                        destino_nome: "Santarém"
+                        modal_nome: "Avião regional"
+                        modal_codigo: "aviao_regional"
+                        modal_categoria: "aereo"
+                        operador_nome: "Azul"
+                        terminal_origem_nome: "Aeroporto de Belém"
+                        terminal_destino_nome: "Aeroporto de Santarém"
+                        duracao_minutos: 80
+                        tarifa_reais: 540.0
+                        hora_partida: "08:00"
+                        hora_chegada_estimada: "09:20"
+                        partida_dia_offset: 0
+                        chegada_dia_offset: 0
+                        frequencia_descricao: "Diário"
+                        dias_semana_mask: 127
+                        acomodacoes: []
+                        regime_hidrico_observacao: "Voo regional."
+                        telefone_contato: null
+                        intervalo_conexao_minutos: 280
+                        data_ultima_atualizacao: "2026-10-30"
+                      - id: 4
+                        origem_nome: "Santarém"
+                        destino_nome: "Manaus"
+                        modal_nome: "Barco regional"
+                        modal_codigo: "barco_regional"
+                        modal_categoria: "fluvial"
+                        operador_nome: "Amazon Star"
+                        terminal_origem_nome: "Porto de Santarém"
+                        terminal_destino_nome: "Porto da Manaus Moderna"
+                        duracao_minutos: 2520
+                        tarifa_reais: 210.0
+                        hora_partida: "14:00"
+                        hora_chegada_estimada: "08:00"
+                        partida_dia_offset: 0
+                        chegada_dia_offset: 2
+                        frequencia_descricao: "Terças, Quintas e Sextas-feiras"
+                        dias_semana_mask: 26
+                        acomodacoes:
+                          - tipo: "rede"
+                            regime: "fixo"
+                            valor_total_reais: 210.0
+                            descricao: "Acomodação em rede"
+                        regime_hidrico_observacao: "Barco de linha."
+                        telefone_contato: null
+                        intervalo_conexao_minutos: null
+                        data_ultima_atualizacao: "2026-10-30"
+        '404':
+          description: Rota não encontrada, trechos não encadeados ou não operam na data informada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "ROTA_NAO_ENCONTRADA"
+                mensagem: "A rota não opera na data informada."
+        '422':
+          description: Parâmetro inválido (ex. ID fora do padrão ou formato de data inválido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "PARAMETRO_INVALIDO"
+                mensagem: "ID de rota 'rota-xyz' inválido. Formato esperado: rota-t{id} (ex: rota-t3-t4)."
+        '503':
+          description: Base relacional indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErroPadrao'
+              example:
+                codigo: "BANCO_INDISPONIVEL"
+                mensagem: "Base de dados relacional indisponível ou não inicializada."
 
   /api/v1/trechos:
     get:
@@ -448,6 +558,23 @@ components:
           type: string
           example: "empresa_regular"
 
+    AcomodacaoItem:
+      type: object
+      properties:
+        tipo:
+          type: string
+          example: "rede"
+        regime:
+          type: string
+          example: "fixo"
+        valor_total_reais:
+          type: number
+          format: float
+          example: 210.00
+        descricao:
+          type: string
+          example: "Acomodação em rede"
+
     TrechoItem:
       type: object
       properties:
@@ -463,6 +590,13 @@ components:
         modal_nome:
           type: string
           example: "Barco regional"
+        modal_codigo:
+          type: string
+          example: "barco_regional"
+        modal_categoria:
+          type: string
+          enum: [fluvial, rodoviario, aereo]
+          example: "fluvial"
         operador_nome:
           type: string
           example: "Amazon Star"
@@ -483,6 +617,45 @@ components:
           type: string
           format: date
           example: "2026-11-03"
+        hora_partida:
+          type: string
+          nullable: true
+          example: "18:00"
+        hora_chegada_estimada:
+          type: string
+          nullable: true
+          example: "14:00"
+        partida_dia_offset:
+          type: integer
+          nullable: true
+          example: 0
+        chegada_dia_offset:
+          type: integer
+          nullable: true
+          example: 6
+        frequencia_descricao:
+          type: string
+          nullable: true
+          example: "Quartas e Sextas-feiras"
+        dias_semana_mask:
+          type: integer
+          example: 20
+        acomodacoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcomodacaoItem'
+        regime_hidrico_observacao:
+          type: string
+          nullable: true
+          example: "Escala em Santarém. Sujeito ao regime de águas."
+        telefone_contato:
+          type: string
+          nullable: true
+          example: null
+        intervalo_conexao_minutos:
+          type: integer
+          nullable: true
+          example: 280
 
     OpcaoRota:
       type: object
@@ -533,6 +706,27 @@ components:
         dias_desde_atualizacao:
           type: integer
           example: 3
+        data_viagem:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-11-20"
+        hora_partida:
+          type: string
+          nullable: true
+          example: "18:00"
+        chegada_estimada:
+          type: string
+          nullable: true
+          example: "14:00"
+        chegada_dia_offset:
+          type: integer
+          nullable: true
+          example: 6
+        chegada_estimada_iso:
+          type: string
+          nullable: true
+          example: "2026-11-26T14:00"
         trechos:
           type: array
           items:
