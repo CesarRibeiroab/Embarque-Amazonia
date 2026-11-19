@@ -27,6 +27,8 @@ class Localidade:
     nome: str
     uf: str
     polo_regional: bool = False
+    tipo: str = "municipio"
+    codigo_iata: Optional[str] = None
 
 
 @dataclass
@@ -53,6 +55,10 @@ class Trecho:
     hora_partida: str = "00:00:00"
     hora_chegada: str = "00:00:00"
     dias_semana_mask: int = 127  # Bitmask: Seg=1, Ter=2, Qua=4, Qui=8, Sex=16, Sab=32, Dom=64
+    frequencia_descricao: str = ""
+    operador_telefone: str = ""
+    acomodacoes: List[dict] = field(default_factory=list)
+    horarios: List[dict] = field(default_factory=list)
 
     def dias_desde_atualizacao(self, data_ref: Optional[date] = None) -> int:
         try:
@@ -152,8 +158,28 @@ class MotorRoteamentoMultimodal:
         cur = con.cursor()
 
         # Carregar localidades
-        for row in cur.execute("SELECT id, nome, uf, e_polo_regional FROM localidade WHERE ativo = 1"):
-            self.adicionar_localidade(Localidade(row[0], row[1], row[2], bool(row[3])))
+        for row in cur.execute("SELECT id, nome, uf, e_polo_regional, COALESCE(tipo, 'municipio'), codigo_iata FROM localidade WHERE ativo = 1"):
+            self.adicionar_localidade(Localidade(row[0], row[1], row[2], bool(row[3]), row[4], row[5]))
+
+        # Carregar acomodações agrupadas por trecho_id
+        acomodacoes_map: Dict[int, List[dict]] = {}
+        for row in cur.execute("SELECT trecho_id, tipo, regime, valor_total_reais, COALESCE(descricao, '') FROM acomodacao_trecho ORDER BY valor_total_reais ASC"):
+            acomodacoes_map.setdefault(row[0], []).append({
+                "tipo": row[1],
+                "regime": row[2],
+                "valor_total_reais": float(row[3]),
+                "descricao": row[4]
+            })
+
+        # Carregar horários agrupados por trecho_id
+        horarios_map: Dict[int, List[dict]] = {}
+        for row in cur.execute("SELECT trecho_id, hora_partida, COALESCE(hora_chegada_estimada, ''), dias_semana_mask, COALESCE(frequencia_descricao, '') FROM horario_operacao WHERE ativo = 1 ORDER BY hora_partida ASC"):
+            horarios_map.setdefault(row[0], []).append({
+                "hora_partida": row[1],
+                "hora_chegada_estimada": row[2],
+                "dias_semana_mask": row[3],
+                "frequencia_descricao": row[4]
+            })
 
         # Carregar trechos agrupados (evitando multiplicação por múltiplos horários)
         query = """
@@ -163,7 +189,9 @@ class MotorRoteamentoMultimodal:
                    t.regime_hidrico_observacao,
                    COALESCE((SELECT hora_partida FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), '00:00:00') AS h_partida,
                    COALESCE((SELECT hora_chegada_estimada FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), '00:00:00') AS h_chegada,
-                   COALESCE((SELECT dias_semana_mask FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), 127) AS mask_dias
+                   COALESCE((SELECT dias_semana_mask FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), 127) AS mask_dias,
+                   COALESCE((SELECT frequencia_descricao FROM horario_operacao WHERE trecho_id = t.id AND ativo = 1 ORDER BY hora_partida ASC LIMIT 1), '') AS freq_desc,
+                   COALESCE(o.telefone_contato, '(91) 90000-0000') AS op_tel
             FROM trecho t
             JOIN operador o ON t.operador_id = o.id
             JOIN modal m ON t.modal_id = m.id
@@ -176,7 +204,11 @@ class MotorRoteamentoMultimodal:
                 data_ultima_atualizacao=r[8], tempo_conexao_espera_minutos=r[9],
                 terminal_origem=r[10] or "", terminal_destino=r[11] or "",
                 observacao_regime=r[12] or "", hora_partida=r[13], hora_chegada=r[14],
-                dias_semana_mask=r[15]
+                dias_semana_mask=r[15],
+                frequencia_descricao=r[16] or "",
+                operador_telefone=r[17] or "(91) 90000-0000",
+                acomodacoes=acomodacoes_map.get(r[0], []),
+                horarios=horarios_map.get(r[0], [])
             )
             self.adicionar_trecho(tr)
 

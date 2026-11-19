@@ -174,6 +174,31 @@ class TesteFastAPIEndpoints(unittest.TestCase):
             self.assertEqual(r_rotas.status_code, 503)
             self.assertEqual(r_rotas.json()["codigo"], "BANCO_INDISPONIVEL")
 
+    def test_16_detalhes_enriquecidos_p07_acomodacoes_e_operador(self):
+        # Consulta rota Belém -> Manaus e valida enriquecimento do Trecho 2 Barco Santarém -> Manaus (Rota 1 C)
+        response = self.client.get("/api/v1/rotas?origem=Belém&destino=Manaus")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        rota_c = next((r for r in data["rotas"] if len(r["trechos"]) == 2), None)
+        self.assertIsNotNone(rota_c, "Rota 1 C (Belém -> Santarém -> Manaus) deve existir")
+
+        trecho_barco = rota_c["trechos"][1]
+        self.assertEqual(trecho_barco["origem_nome"], "Santarém")
+        self.assertEqual(trecho_barco["destino_nome"], "Manaus")
+        self.assertEqual(trecho_barco["operador_nome"], "Amazon Star")
+        self.assertIn("90000-0000", trecho_barco["operador_telefone"])
+        self.assertIn("vazante", trecho_barco["observacao_regime"].lower())
+
+        # Validar acomodações enriquecidas (Rede e Camarote duplo)
+        tipos_ac = [ac["tipo"] for ac in trecho_barco["acomodacoes"]]
+        self.assertIn("rede", tipos_ac)
+        self.assertIn("camarote_duplo", tipos_ac)
+
+        rede = next(ac for ac in trecho_barco["acomodacoes"] if ac["tipo"] == "rede")
+        camarote = next(ac for ac in trecho_barco["acomodacoes"] if ac["tipo"] == "camarote_duplo")
+        self.assertEqual(rede["valor_total_reais"], 210.0)
+        self.assertEqual(camarote["valor_total_reais"], 900.0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

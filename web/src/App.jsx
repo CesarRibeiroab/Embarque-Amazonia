@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import TelaDetalheTrecho from './components/TelaDetalheTrecho';
 import {
   corCategoriaModal,
   estiloSelo,
@@ -22,6 +23,7 @@ export default function App() {
   const [erro, setErro] = useState(null);
   const [resultado, setResultado] = useState(null);
   const [expandidas, setExpandidas] = useState({});
+  const [trechoDetalhado, setTrechoDetalhado] = useState(null);
 
   const carregarSugestoes = async (termo, setter) => {
     try {
@@ -94,6 +96,17 @@ export default function App() {
     }
   };
 
+  if (trechoDetalhado !== null) {
+    return (
+      <main className="app-container">
+        <TelaDetalheTrecho
+          trecho={trechoDetalhado === 'canonico' ? null : trechoDetalhado}
+          onVoltar={() => setTrechoDetalhado(null)}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="app-container">
       <header className="app-header">
@@ -102,6 +115,17 @@ export default function App() {
           Busca multimodal de rotas na Amazônia Legal
         </p>
       </header>
+
+      <div className="btn-demo-bar">
+        <button
+          type="button"
+          className="btn-demo-p07"
+          onClick={() => setTrechoDetalhado('canonico')}
+          title="Abrir Tela P07 isolada com dados canônicos do Barco Santarém -> Manaus"
+        >
+          🔍 Ver Detalhe do Trecho P07 (Demo Isolada)
+        </button>
+      </div>
 
       <div className="aviso-ilustrativo" role="note">
         Dados de exemplo ilustrativos. Preços e horários são estimativas.
@@ -301,6 +325,16 @@ export default function App() {
                               {tr.data_ultima_atualizacao
                                 ? ` • Base: ${formatarData(tr.data_ultima_atualizacao)}`
                                 : ''}
+                            </div>
+                            <div className="trecho-actions">
+                              <button
+                                type="button"
+                                className="btn-detalhe-trecho"
+                                onClick={() => setTrechoDetalhado(tr)}
+                                title="Abrir Tela P07 com os dados deste trecho"
+                              >
+                                🔍 Ver detalhes do trecho (P07)
+                              </button>
                             </div>
                           </div>
                         ))}

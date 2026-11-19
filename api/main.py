@@ -74,6 +74,22 @@ class LocalidadeResponse(BaseModel):
     nome: str
     uf: str
     e_polo_regional: bool
+    tipo: Optional[str] = "municipio"
+    codigo_iata: Optional[str] = None
+
+
+class AcomodacaoResponse(BaseModel):
+    tipo: str
+    regime: str
+    valor_total_reais: float
+    descricao: Optional[str] = ""
+
+
+class HorarioOperacaoResponse(BaseModel):
+    hora_partida: str
+    hora_chegada_estimada: Optional[str] = ""
+    dias_semana_mask: int
+    frequencia_descricao: Optional[str] = ""
 
 
 class TrechoResponse(BaseModel):
@@ -81,12 +97,21 @@ class TrechoResponse(BaseModel):
     origem_nome: str
     destino_nome: str
     modal_nome: str
+    modal_codigo: Optional[str] = None
     operador_nome: str
+    operador_telefone: Optional[str] = None
     terminal_origem_nome: str
     terminal_destino_nome: str
     duracao_minutos: int
     tarifa_reais: float
     data_ultima_atualizacao: str
+    hora_partida: Optional[str] = None
+    hora_chegada_estimada: Optional[str] = None
+    dias_semana_mask: Optional[int] = 127
+    frequencia_descricao: Optional[str] = None
+    observacao_regime: Optional[str] = None
+    acomodacoes: List[AcomodacaoResponse] = []
+    horarios: List[HorarioOperacaoResponse] = []
 
 
 class OpcaoRotaResponse(BaseModel):
@@ -157,11 +182,19 @@ def listar_localidades(busca: Optional[str] = Query(None, description="Termo par
     res = []
     termo_busca = normalizar_texto(busca) if busca else None
     for loc in motor.localidades.values():
+        item = LocalidadeResponse(
+            id=loc.id,
+            nome=loc.nome,
+            uf=loc.uf,
+            e_polo_regional=loc.polo_regional,
+            tipo=getattr(loc, 'tipo', 'municipio'),
+            codigo_iata=getattr(loc, 'codigo_iata', None)
+        )
         if termo_busca:
             if termo_busca in normalizar_texto(loc.nome):
-                res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
+                res.append(item)
         else:
-            res.append(LocalidadeResponse(id=loc.id, nome=loc.nome, uf=loc.uf, e_polo_regional=loc.polo_regional))
+            res.append(item)
     return res
 
 
@@ -278,12 +311,21 @@ def buscar_rotas(
                 origem_nome=motor.localidades[t.origem_id].nome,
                 destino_nome=motor.localidades[t.destino_id].nome,
                 modal_nome=t.modal_nome,
+                modal_codigo=t.modal_codigo,
                 operador_nome=t.operador_nome,
+                operador_telefone=getattr(t, "operador_telefone", None) or "(91) 90000-0000",
                 terminal_origem_nome=t.terminal_origem,
                 terminal_destino_nome=t.terminal_destino,
                 duracao_minutos=t.duracao_minutos,
                 tarifa_reais=t.tarifa_reais,
-                data_ultima_atualizacao=t.data_ultima_atualizacao
+                data_ultima_atualizacao=t.data_ultima_atualizacao,
+                hora_partida=t.hora_partida,
+                hora_chegada_estimada=t.hora_chegada,
+                dias_semana_mask=t.dias_semana_mask,
+                frequencia_descricao=getattr(t, "frequencia_descricao", ""),
+                observacao_regime=t.observacao_regime,
+                acomodacoes=[AcomodacaoResponse(**ac) for ac in getattr(t, "acomodacoes", [])],
+                horarios=[HorarioOperacaoResponse(**h) for h in getattr(t, "horarios", [])]
             ) for t in r.trechos
         ]
 
