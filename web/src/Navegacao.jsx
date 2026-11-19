@@ -3,7 +3,8 @@ import App from './App.jsx';
 import TelaDetalheRota from './components/TelaDetalheRota.jsx';
 import { rota1OpcaoC } from './fixtures/rota1_opcao_c.js';
 
-// Descoberta dinâmica das telas dos colegas (Herbert, Lucas e Fernando) sem acoplamento estático
+// INTEGRAÇÃO: Para ativar a tela de um colega, basta adicionar o arquivo
+// no caminho listado abaixo. O Vite detecta automaticamente em tempo de build via import.meta.glob.
 const modulosTelas = import.meta.glob([
   './components/TelaFiltros.jsx',
   './components/TelaComparar.jsx',
@@ -50,6 +51,8 @@ export default function Navegacao() {
   const [rotaAtual, setRotaAtual] = useState(null);
   const [dataViagemAtual, setDataViagemAtual] = useState('');
   const [trechoAtual, setTrechoAtual] = useState(null);
+  const [selecionadasParaComparar, setSelecionadasParaComparar] = useState([]);
+  const [filtrosAplicados, setFiltrosAplicados] = useState(null);
 
   useEffect(() => {
     function onHashChange() {
@@ -83,6 +86,11 @@ export default function Navegacao() {
     } else {
       window.location.hash = '#/';
     }
+  };
+
+  const handleIniciarComparacao = (rotas) => {
+    setSelecionadasParaComparar(rotas || []);
+    window.location.hash = '#/comparar';
   };
 
   // 1. Rota de Laboratório do P06 (com fixture local, independente da API)
@@ -119,8 +127,12 @@ export default function Navegacao() {
       return (
         <Suspense fallback={<div className="detalhe-estado-box">Carregando filtros...</div>}>
           <TelaFiltrosLazy
-            onFechar={handleVoltarParaBusca}
-            onAplicar={handleVoltarParaBusca}
+            filtrosIniciais={filtrosAplicados || undefined}
+            onVoltar={handleVoltarParaBusca}
+            onAplicar={(filtros) => {
+              setFiltrosAplicados(filtros);
+              handleVoltarParaBusca();
+            }}
           />
         </Suspense>
       );
@@ -139,8 +151,9 @@ export default function Navegacao() {
       return (
         <Suspense fallback={<div className="detalhe-estado-box">Carregando comparador...</div>}>
           <TelaCompararLazy
-            rotas={rotaAtual ? [rotaAtual] : []}
-            dataViagem={dataViagemAtual}
+            opcoes={selecionadasParaComparar.length > 0 ? selecionadasParaComparar : (rotaAtual ? [rotaAtual] : [])}
+            origem={rotaAtual?.origem_nome || 'Belém'}
+            destino={rotaAtual?.destino_nome || 'Manaus'}
             onVoltar={handleVoltarParaBusca}
             onVerDetalhes={handleAbrirRota}
           />
@@ -178,5 +191,11 @@ export default function Navegacao() {
   }
 
   // Rota padrão: #/ (Busca e Listagem de Resultados)
-  return <App onAbrirRota={handleAbrirRota} />;
+  return (
+    <App
+      onAbrirRota={handleAbrirRota}
+      onComparar={handleIniciarComparacao}
+      filtrosExternos={filtrosAplicados}
+    />
+  );
 }

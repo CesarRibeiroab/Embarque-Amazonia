@@ -358,7 +358,7 @@ def buscar_rotas(
     )
 
 
-PADRAO_ID_ROTA = re.compile(r"^rota-t\d+(-t\d+){0,2}$")
+PADRAO_ID_ROTA = re.compile(r"^rota-t\d+(-t\d+)*$")
 
 
 @app.get(

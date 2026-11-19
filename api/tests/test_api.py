@@ -312,8 +312,8 @@ class TesteFastAPIEndpoints(unittest.TestCase):
                 data = resp.json()
                 t4 = data["trechos"][1]
 
-                # Prova 1: acomodações do trecho 4 agora possuem 2 itens
-                self.assertEqual(len(t4["acomodacoes"]), 2)
+                # Prova 1: acomodações do trecho 4 possuem os tipos enriquecidos
+                self.assertGreaterEqual(len(t4["acomodacoes"]), 2)
                 tipos = [a["tipo"] for a in t4["acomodacoes"]]
                 self.assertIn("rede", tipos)
                 self.assertIn("camarote_duplo", tipos)

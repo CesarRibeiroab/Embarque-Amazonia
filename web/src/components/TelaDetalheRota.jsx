@@ -102,7 +102,12 @@ export default function TelaDetalheRota({
       fetch(url)
         .then((res) => (res.ok ? res.json() : null))
         .then((dadosCompletos) => {
-          if (dadosCompletos && dadosCompletos.trechos) {
+          if (
+            dadosCompletos &&
+            Array.isArray(dadosCompletos.trechos) &&
+            dadosCompletos.trechos.length > 0 &&
+            dadosCompletos.id === dadosRota?.id
+          ) {
             setDadosRota(dadosCompletos);
           }
         })

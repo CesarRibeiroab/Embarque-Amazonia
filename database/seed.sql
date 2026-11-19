@@ -30,11 +30,11 @@ INSERT INTO localidade (id, codigo_ibge, codigo_iata, nome, uf, tipo, e_polo_reg
 (7, '1500404', NULL, 'Alenquer', 'PA', 'municipio', 0, 1);
 
 -- 3. OPERADORES ILUSTRATIVOS (Card 1)
-INSERT INTO operador (id, razao_social, nome_fantasia, tipo_operador, cidade_base_id) VALUES
-(1, 'Amazon Star Navegações Ltda', 'Amazon Star', 'empresa_regular', 1),
-(2, 'Azul Linhas Aéreas Brasileiras S.A.', 'Azul', 'empresa_regular', 1),
-(3, 'Piloto Autônomo Colaborativo', 'Piloto autônomo (cadastro colaborativo)', 'autonomo_associado', 2),
-(4, 'Oliveira Navegações da Amazônia', 'Oliveira Navegações', 'empresa_regular', 2);
+INSERT INTO operador (id, razao_social, nome_fantasia, tipo_operador, telefone_contato, email_contato, cidade_base_id) VALUES
+(1, 'Amazon Star Navegações Ltda', 'Amazon Star', 'empresa_regular', '(91) 90000-0000', 'contato@amazonstar.com.br', 1),
+(2, 'Azul Linhas Aéreas Brasileiras S.A.', 'Azul', 'empresa_regular', '(11) 4003-1118', 'atendimento@voeazul.com.br', 1),
+(3, 'Piloto Autônomo Colaborativo', 'Piloto autônomo (cadastro colaborativo)', 'autonomo_associado', '(92) 99123-4567', 'piloto.cooperativa@am.gov.br', 2),
+(4, 'Oliveira Navegações da Amazônia', 'Oliveira Navegações', 'empresa_regular', '(92) 98456-7890', 'contato@oliveiranavegacoes.com.br', 2);
 
 -- 4. OPERADOR_MODAL (Mapeamento N:N dos modais operados)
 INSERT INTO operador_modal (operador_id, modal_id, numero_registro, orgao_emissor) VALUES
@@ -66,7 +66,7 @@ INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_de
 (3, 1, 3, 'Aeroporto de Belém', 'Aeroporto de Santarém', 2, 8, 80, 540.00, 280, 'ida', date('now', 'localtime', '-12 days'), 'Voo regional.');
 
 INSERT INTO trecho (id, origem_id, destino_id, terminal_origem_nome, terminal_destino_nome, operador_id, modal_id, duracao_estimada_minutos, tarifa_base_reais, tempo_conexao_espera_minutos, sentido, data_ultima_atualizacao, regime_hidrico_observacao) VALUES
-(4, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 210.00, 0, 'ida', date('now', 'localtime', '-12 days'), 'Barco de linha.');
+(4, 3, 2, 'Porto de Santarém', 'Porto da Manaus Moderna', 1, 1, 2520, 210.00, 0, 'ida', date('now', 'localtime', '-12 days'), 'Na vazante, a viagem pode durar mais decorrente do surgimento de bancos de areia no Rio Amazonas.');
 
 -- ROTA 2: Manaus -> Tefé
 -- Opção A: Voadeira expressa piloto autônomo (11h = 660 min, R$ 320,00, atualizado há 20 dias)
@@ -112,11 +112,22 @@ INSERT INTO horario_operacao (trecho_id, hora_partida, hora_chegada_estimada, di
 (11, '06:00:00', '17:00:00', 25, 'Segundas, Quintas e Sextas-feiras'),
 (12, '17:00:00', '05:00:00', 16, 'Sextas-feiras');
 
--- 7. ACOMODAÇÕES
+-- 7. ACOMODAÇÕES (Rede e Camarote duplo nos barcos regionais e assentos padrão em voos/voadeiras)
 INSERT INTO acomodacao_trecho (trecho_id, tipo, regime, valor_total_reais, descricao) VALUES
-(1, 'rede', 'fixo', 350.00, 'Acomodação tradicional em rede'),
-(1, 'camarote_duplo', 'fixo', 1400.00, 'Camarote privativo climatizado'),
-(4, 'rede', 'fixo', 210.00, 'Acomodação em rede'),
-(6, 'rede', 'fixo', 190.00, 'Passagem em rede'),
-(9, 'rede', 'fixo', 350.00, 'Acomodação em rede'),
-(12, 'rede', 'fixo', 190.00, 'Acomodação em rede');
+(1, 'rede', 'fixo', 350.00, 'Acomodação tradicional em rede no convés'),
+(1, 'camarote_duplo', 'fixo', 1400.00, 'Camarote privativo climatizado com beliche'),
+(2, 'assento_padrao', 'fixo', 780.00, 'Poltrona individual em aeronave regional'),
+(3, 'assento_padrao', 'fixo', 540.00, 'Poltrona individual em aeronave regional'),
+(4, 'rede', 'fixo', 210.00, 'Acomodação tradicional em rede no convés'),
+(4, 'camarote_duplo', 'fixo', 900.00, 'Camarote duplo privativo climatizado'),
+(5, 'assento_padrao', 'fixo', 320.00, 'Assento em lancha rápida com colete salva-vidas'),
+(6, 'rede', 'fixo', 190.00, 'Acomodação tradicional em rede'),
+(6, 'camarote_duplo', 'fixo', 750.00, 'Camarote duplo privativo'),
+(7, 'rede', 'fixo', 120.00, 'Acomodação tradicional em rede'),
+(7, 'camarote_duplo', 'fixo', 480.00, 'Camarote duplo privativo'),
+(9, 'rede', 'fixo', 350.00, 'Acomodação tradicional em rede no convés'),
+(9, 'camarote_duplo', 'fixo', 1400.00, 'Camarote privativo climatizado com beliche'),
+(10, 'assento_padrao', 'fixo', 780.00, 'Poltrona individual em aeronave regional'),
+(11, 'assento_padrao', 'fixo', 320.00, 'Assento em lancha rápida com colete salva-vidas'),
+(12, 'rede', 'fixo', 190.00, 'Acomodação tradicional em rede'),
+(12, 'camarote_duplo', 'fixo', 750.00, 'Camarote duplo privativo');

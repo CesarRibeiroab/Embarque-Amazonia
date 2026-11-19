@@ -77,3 +77,39 @@ export function estiloSelo(selo) {
   }
 }
 
+const DIAS_DA_SEMANA = [
+  { bit: 1, nome: "Seg" },
+  { bit: 2, nome: "Ter" },
+  { bit: 4, nome: "Qua" },
+  { bit: 8, nome: "Qui" },
+  { bit: 16, nome: "Sex" },
+  { bit: 32, nome: "Sáb" },
+  { bit: 64, nome: "Dom" },
+];
+
+export function formatarDiasSemana(mask) {
+  const valor = Number(mask || 0);
+
+  const dias = DIAS_DA_SEMANA
+    .filter(dia => (valor & dia.bit) !== 0)
+    .map(dia => dia.nome);
+
+  if (dias.length === 0) return "Não informado";
+  if (dias.length === 7) return "Todos os dias";
+  if (dias.length === 1) return dias[0];
+
+  return `${dias.slice(0, -1).join(", ")} e ${dias[dias.length - 1]}`;
+}
+
+export function formatarHora(horaStr) {
+  if (!horaStr || typeof horaStr !== 'string') return '--:--';
+  const limpa = horaStr.trim();
+  const match = limpa.match(/^(\d{1,2}):(\d{2})/);
+  if (match) {
+    const [, h, m] = match;
+    return `${h.padStart(2, '0')}:${m}`;
+  }
+  return horaStr;
+}
+
+
