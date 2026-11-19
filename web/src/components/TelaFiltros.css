@@ -1,0 +1,52 @@
+/* Prefixo tela-filtros: não altera o CSS das telas dos colegas. */
+.tela-filtros {
+  --tf-primaria: var(--cor-primaria, #1B5E3F);
+  --tf-fluvial: var(--cor-secundaria, #1F6FB2);
+  --tf-rodoviario: #D9822B;
+  --tf-aereo: #6A4C93;
+  --tf-texto: var(--cor-texto, #1A1A1A);
+  --tf-secundario: var(--cor-texto-secundario, #6B7280);
+  --tf-borda: var(--cor-borda, #D1D5DB);
+  --tf-fundo: var(--cor-fundo, #F7F8F7);
+  box-sizing: border-box;
+  min-height: 100dvh;
+  background: var(--tf-fundo);
+  color: var(--tf-texto);
+  font-family: Inter, Arial, sans-serif;
+}
+.tela-filtros *, .tela-filtros *::before, .tela-filtros *::after { box-sizing: border-box; }
+.tela-filtros__cabecalho { background: var(--tf-primaria); color: white; padding: 24px 16px; }
+.tela-filtros__cabecalho-interno { max-width: 540px; margin: auto; display: flex; gap: 12px; align-items: flex-start; }
+.tela-filtros__marca { margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: .03em; }
+.tela-filtros h1 { margin: 0 0 6px; font-size: 24px; line-height: 1.2; font-weight: 700; }
+.tela-filtros__cabecalho p:last-child { margin: 0; font-size: 14px; }
+.tela-filtros__voltar { border: 1px solid #fff; border-radius: 8px; background: transparent; color: white; font-size: 24px; min-width: 36px; height: 36px; cursor: pointer; }
+.tela-filtros form { margin: auto; max-width: 540px; }
+.tela-filtros__conteudo { padding: 20px 16px 12px; display: grid; gap: 20px; }
+.tela-filtros__grupo { min-width: 0; margin: 0; padding: 0; border: 0; }
+.tela-filtros__grupo legend, .tela-filtros__titulo-campo { display: block; width: 100%; margin-bottom: 10px; font-size: 18px; font-weight: 600; }
+.tela-filtros__auxiliar { margin: -4px 0 12px; color: var(--tf-secundario); font-size: 12px; }
+.tela-filtros__criterios { display: grid; gap: 8px; }
+.tela-filtros__criterio { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px; border: 1px solid var(--tf-borda); border-radius: 8px; background: #FFFFFF; cursor: pointer; font-size: 14px; }
+.tela-filtros__criterio.is-active { border-color: var(--tf-primaria); outline: 1px solid var(--tf-primaria); }
+.tela-filtros__criterio input { accent-color: var(--tf-primaria); }
+.tela-filtros__categoria { --tf-categoria: var(--tf-fluvial); margin: 0 0 16px; }
+.tela-filtros__categoria--rodoviario { --tf-categoria: var(--tf-rodoviario); }
+.tela-filtros__categoria--aereo { --tf-categoria: var(--tf-aereo); }
+.tela-filtros__categoria h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--tf-categoria); }
+.tela-filtros__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tela-filtros__chip { border: 1px solid var(--tf-categoria); border-radius: 8px; background: #FFFFFF; color: var(--tf-categoria); font: inherit; font-size: 14px; padding: 8px 12px; cursor: pointer; }
+.tela-filtros__chip.is-active { background: var(--tf-categoria); color: #FFFFFF; }
+.tela-filtros__preco { display: flex; overflow: hidden; align-items: center; border: 1px solid var(--tf-borda); border-radius: 8px; background: white; min-height: 48px; }
+.tela-filtros__preco span { padding: 12px; font-weight: 600; color: var(--tf-secundario); }
+.tela-filtros__preco input { flex: 1; border: 0; outline: 0; padding: 12px 8px; min-width: 0; font: inherit; font-size: 14px; }
+.tela-filtros__preco:focus-within { outline: 2px solid var(--tf-primaria); }
+.tela-filtros__erro { margin: 8px 0 0; font-size: 12px; color: #C62828; }
+.tela-filtros__acomodacoes { display: flex; gap: 8px; }
+.tela-filtros__acomodacao { border: 1px solid var(--tf-borda); border-radius: 8px; padding: 12px 20px; background: white; cursor: pointer; font: inherit; font-size: 14px; }
+.tela-filtros__acomodacao.is-active { color: white; border-color: var(--tf-primaria); background: var(--tf-primaria); }
+.tela-filtros__rodape { position: sticky; bottom: 0; z-index: 2; background: #FFFFFF; border-top: 1px solid var(--tf-borda); display: grid; gap: 12px; grid-template-columns: 1fr 1fr; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
+.tela-filtros__botao { min-height: 48px; border-radius: 8px; border: 1px solid var(--tf-primaria); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+.tela-filtros__botao--limpar { background: #FFFFFF; color: var(--tf-primaria); }
+.tela-filtros__botao--aplicar { background: var(--tf-primaria); color: #FFFFFF; }
+.tela-filtros button:focus-visible { outline: 3px solid var(--tf-fluvial); outline-offset: 2px; }

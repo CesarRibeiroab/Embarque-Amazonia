@@ -1,0 +1,214 @@
+.comparar-tela {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  min-width: 0;
+}
+
+.comparar-instrucao,
+.comparar-pendente {
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.comparar-rolagem {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 16px 0;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.comparar-rolagem:focus-visible {
+  outline: 3px solid #1f6fb2;
+  outline-offset: 3px;
+}
+
+.comparar-tabela {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: collapse;
+}
+
+.comparar-legenda {
+  padding: 12px;
+  color: #6b7280;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.comparar-tabela th,
+.comparar-tabela td {
+  min-width: 160px;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.comparar-tabela thead th {
+  background: #1b5e3f;
+  color: #ffffff;
+}
+
+.comparar-tabela tbody th {
+  min-width: 130px;
+  background: #f3f4f6;
+}
+
+.comparar-tabela tr:last-child > * {
+  border-bottom: 0;
+}
+
+.comparar-tabela tr > *:last-child {
+  border-right: 0;
+}
+
+.comparar-tabela td.comparar-melhor {
+  background: #edf7ee;
+}
+
+.comparar-destaque {
+  display: block;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border: 1px solid #2e7d32;
+  border-radius: 6px;
+  color: #1b5e3f;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.comparar-modais,
+.comparar-selos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.comparar-selos:empty {
+  display: none;
+}
+
+.comparar-selos {
+  margin-top: 8px;
+}
+
+.comparar-modal,
+.comparar-selo {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.comparar-modal {
+  color: #ffffff;
+}
+
+.comparar-botao-detalhes {
+  padding: 10px 12px;
+  border: 1px solid #1b5e3f;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1b5e3f;
+  font: inherit;
+  cursor: pointer;
+}
+
+.comparar-botao-detalhes:hover:not(:disabled) {
+  background: #edf7ee;
+}
+
+.comparar-botao-detalhes:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.app-container.comparar-tela {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 24px;
+  font-size: 16px;
+}
+
+.comparar-tela .app-title {
+  font-size: 1.75rem;
+}
+
+.comparar-tela .app-subtitle {
+  font-size: 1rem;
+}
+
+.comparar-tela .comparar-instrucao,
+.comparar-tela .comparar-pendente {
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.comparar-tela .comparar-rolagem {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.comparar-tela .comparar-tabela {
+  width: 100%;
+  min-width: 740px;
+  table-layout: fixed;
+  font-size: 14px;
+}
+
+.comparar-tela .comparar-tabela th,
+.comparar-tela .comparar-tabela td {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.comparar-tela .comparar-tabela th:first-child {
+  width: 150px;
+}
+
+.comparar-tela .comparar-legenda {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.comparar-tela .comparar-modal,
+.comparar-tela .comparar-selo,
+.comparar-tela .comparar-destaque {
+  font-size: 12px;
+}
+
+.comparar-tela .comparar-botao-detalhes {
+  width: 100%;
+  padding: 9px;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .app-container.comparar-tela {
+    padding: 16px;
+  }
+
+  .comparar-tela .app-title {
+    font-size: 1.5rem;
+  }
+}
