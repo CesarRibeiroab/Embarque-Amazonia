@@ -10,9 +10,16 @@
   --cor-erro: #C62828;
 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
   line-height: 1.45;
   color: var(--cor-texto);
   background-color: #E5E7EB;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cor-secundaria);
+  outline-offset: 2px;
 }
 
 *,
