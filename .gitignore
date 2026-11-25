@@ -69,7 +69,9 @@ Thumbs.db
 *.zip
 _arquivo/
 Entrega_Parcial/
-Materia/
+Materia/*
+!Materia/Artigo_EmbarqueAmazonia_Identificado.doc
+!Materia/Artigo_EmbarqueAmazonia_Anonimo.doc
 PI2_*.md
 Relatorio_Academico_*.md
 artigo....md
